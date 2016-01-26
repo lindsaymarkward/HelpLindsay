@@ -101,5 +101,5 @@ def get_message_status(message_id, access_token):
     # print(r.text)
     return r.json()
 
-
-main()
+if __name__ == '__main__':
+    main()
