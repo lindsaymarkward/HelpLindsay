@@ -16,11 +16,16 @@ FILE_NAME = "JCU_Weeks.ics"
 WEEKS_IN_STUDY_PERIOD = 13
 
 
-def create_calendar():
+def create_calendar(study_period="SP1"):
+    """
+    Create a single calendar with one standard on-campus study period dates
+    :param study_period: which study period to make (just text to add to events)
+    """
+    # TODO: probably make this do both SP1 and SP2 in one calendar (won't really ever want just one)
     # get required dates - week 1 and lecture recess; others are derived
     week1text = input("Week 1 Date (dd/mm/yy): ")
     week1date = datetime.strptime(week1text, "%d/%m/%y").date()
-    lecture_recess_text = input("Lecture Recess Date (dd/mm/yyyy): ")
+    lecture_recess_text = input("Lecture Recess Date (dd/mm/yy): ")
     lecture_recess_date = datetime.strptime(lecture_recess_text, "%d/%m/%y").date()
 
     # create "calendar" to add events to
@@ -28,7 +33,7 @@ def create_calendar():
 
     # add O Week event (1 week before Week 1)
     event = Event()
-    event.add('summary', 'O Week')
+    event.add('summary', study_period + ' O Week')
     event.add('dtstart', week1date - timedelta(days=7))
     cal.add_component(event)
 
@@ -39,9 +44,9 @@ def create_calendar():
         event = Event()
         # handle lecture recess, not incrementing week number
         if week_date == lecture_recess_date:
-            event.add('summary', 'Lecture Recess')
+            event.add('summary', study_period + ' Lecture Recess')
         else:
-            event.add('summary', 'Week ' + str(week_number))
+            event.add('summary', study_period + ' Week ' + str(week_number))
             week_number += 1
 
         event.add('dtstart', week_date)
@@ -51,13 +56,13 @@ def create_calendar():
 
     # add swotvac and exams after final week
     event = Event()
-    event.add('summary', 'Swotvac')
+    event.add('summary', study_period + ' Swotvac')
     event.add('dtstart', week_date)
     week_date += timedelta(days=7)
     cal.add_component(event)
 
     event = Event()
-    event.add('summary', 'Exams')
+    event.add('summary', study_period + ' Exams')
     event.add('dtstart', week_date)
     cal.add_component(event)
 
@@ -66,4 +71,45 @@ def create_calendar():
     calendar_file.write(cal.to_ical())
     calendar_file.close()
 
-create_calendar()
+
+def create_off_campus_calendar(weeks_in_study_period=10):
+    """
+    Create one calendar with all 6 off-campus study periods in it
+    :param weeks_in_study_period: how many weeks are in a normal study period, default = 10
+    :return:
+    """
+    # each tuple in the list looks like (study period, week 1 date, week before lecture recess)
+    start_dates = [('SP21/51', '14/03/16', 5), ('SP22/52', '18/07/16', 5), ('SP23/53', '14/11/16', 6)]
+
+    # create "calendar" to add events to
+    cal = Calendar()
+
+    # loop through study periods (order doesn't matter)
+    for study_period, start_date, lecture_recess_week in start_dates:
+        print("{} starts {}, lec rec after week {}".format(study_period, start_date, lecture_recess_week))
+
+        # loop through all numbered weeks
+        week_date = datetime.strptime(start_date, "%d/%m/%y").date()
+        week_number = 1
+        for i in range(weeks_in_study_period + 1):
+            event = Event()
+
+            # handle lecture recess, not incrementing week number
+            if i == lecture_recess_week:
+                event.add('summary', study_period + ' Lecture Recess')
+            else:
+                event.add('summary', "{} Week {}".format(study_period, week_number))
+                week_number += 1
+
+            event.add('dtstart', week_date)
+            cal.add_component(event)
+            # add one week for next event
+            week_date += timedelta(days=7)
+
+    # write calendar file to disk (open the file to add events to Calendar program)
+    calendar_file = open(FILE_NAME, 'wb')
+    calendar_file.write(cal.to_ical())
+    calendar_file.close()
+
+create_calendar(study_period="SP2")
+create_off_campus_calendar()
