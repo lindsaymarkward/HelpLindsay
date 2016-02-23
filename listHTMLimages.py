@@ -35,10 +35,7 @@ def main():
     for filename in os.listdir('.'):
         if filename.endswith('.html'):
             print(filename)
-            f = open(filename, encoding='utf8')
-            text = f.read()
-            parser.feed(text)
-            # parser.reset()
-            f.close()
+            with open(filename, encoding='utf8') as f:
+                parser.feed(f.read())
 
 main()
