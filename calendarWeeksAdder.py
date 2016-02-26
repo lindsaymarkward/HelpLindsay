@@ -20,7 +20,6 @@ def create_on_campus_calendar():
     """
     Create a single calendar with one standard on-campus study period dates
     """
-    # TODO: probably make this do both SP1 and SP2 in one calendar (won't really ever want just one)
 
     # create "calendar" to add events to
     cal = Calendar()
