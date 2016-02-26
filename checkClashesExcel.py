@@ -10,6 +10,7 @@ __author__ = 'sci-lmw1'
 FILENAME = '3rdYear.xlsx'
 # FILENAME = 'Classlists.xlsx'
 CAMPUSES = ["CNS", "TSV"]
+MAX_COMBO = 2
 
 
 def main():
@@ -21,6 +22,16 @@ def main():
     # print_class_lists(students, subjects)
 
 
+def print_subjects(subjects):
+    """
+    print a set/frozenset of subjects nicely, sorted
+    :param subjects: set/frozenset of strings
+    """
+    subjects_to_print = list(subjects)
+    subjects_to_print.sort()
+    print(", ".join(subjects_to_print))
+
+
 def print_clashes(combinations, students):
     """
     Print all students who have clashes with any combination of subjects, by campus
@@ -28,15 +39,18 @@ def print_clashes(combinations, students):
     :param students: dictionary of student data containing what subjects they take
     """
     for combo in combinations:
-        print(combo)
+        print_subjects(combo)
         for campus in CAMPUSES:
             print(campus, end=": ")
+            students_to_print = []
             count = 0
             for student in students[campus]:
-                if set(students[campus][student]) == combo:
-                    print(student, end=', ')
+                # save/print student if they do ALL of the subjects in the combo
+                if [does_subject in students[campus][student] for does_subject in combo].count(False) == 0:
+                    students_to_print.append(student)
                     count += 1
-            print("", count)
+            print(count, "-", ", ".join(students_to_print))
+        print()
 
 
 def print_class_lists(students, subjects):
@@ -99,14 +113,15 @@ def make_combinations(values):
     :return: list of all combinations
     """
     combinations = {frozenset(values)}
-    print(combinations)
+    # print(combinations)
     n = len(values)
     # loop through all relevant bit strings (non-zero, non-all-1's)
     for i in range(1, 2 ** n - 1):
         # print(bin(i))
         # print(str(bin(i)))
         bit_string = "{:0{}b}".format(i, n)
-        if bit_string.count('1') > 1:
+        count_ones = bit_string.count('1')
+        if count_ones > 1 and count_ones <= MAX_COMBO:
             # print(bit_string)
             combo = set()
             for i, char in enumerate(bit_string):
