@@ -1,6 +1,8 @@
 
 .idea/
 __pycache__/
+testQuestions/
+data/
 *.xlsx
 *.xls
 *.csv
@@ -9,22 +11,19 @@ __pycache__/
 JCU_Weeks.ics
 combinations.py
 databaseDetails.txt
-fileRenamer.py
 justtesting.py
 logins.txt
 messages.txt
 private.py
 quiznight6.py
+nonslackers.txt
 slackEmails.txt
 slackEmails2.txt
-slackInviteChannels.py
 slackInviteResults.txt
-slackSendPasswords.py
 slackTest.py
 smsTelstraPrivate.py
 smsTestsTwilio.py
 subjects.txt
 test.ics
 test.py
-testQuestions/
 things.txt

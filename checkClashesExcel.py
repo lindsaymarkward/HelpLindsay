@@ -7,10 +7,10 @@ import openpyxl
 SHEET_NAME = "Sheet1"
 
 __author__ = 'sci-lmw1'
-FILENAME = '3rdYear.xlsx'
+FILENAME = 'data/AllCPstudentsSP22016.xlsx'  # Note: Files must be in the (newer) XLSX format.
 # FILENAME = 'Classlists.xlsx'
-CAMPUSES = ["CNS", "TSV"]
-MAX_COMBO = 2
+CAMPUSES = ["TSV"]  # ["CNS", "TSV"]
+MAX_COMBO = 2  # maximum size of subject combination to check
 
 
 def main():
@@ -121,12 +121,12 @@ def make_combinations(values):
         # print(str(bin(i)))
         bit_string = "{:0{}b}".format(i, n)
         count_ones = bit_string.count('1')
-        if count_ones > 1 and count_ones <= MAX_COMBO:
+        if 1 < count_ones <= MAX_COMBO:
             # print(bit_string)
             combo = set()
-            for i, char in enumerate(bit_string):
+            for j, char in enumerate(bit_string):
                 if char == '1':
-                    combo.add(values[i])
+                    combo.add(values[j])
             combinations.add(frozenset(combo))
     return combinations
     # print(len(combinations), combinations)
