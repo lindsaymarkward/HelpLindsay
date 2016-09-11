@@ -7,7 +7,6 @@
  */
 
 //echo "<pre>";
-//echo "check channels";
 //print_r($_post);
 //echo "</pre>";
 //echo "plain:";

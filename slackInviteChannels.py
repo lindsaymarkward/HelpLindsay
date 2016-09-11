@@ -1,3 +1,7 @@
+"""
+Script to invite all students in class list file to the Slack channels for each subject they do
+Takes XLSX file from JCU StaffOnline (subject "CP%")
+"""
 import openpyxl
 from pprint import PrettyPrinter
 from slacker import Slacker
@@ -124,7 +128,7 @@ def get_student_data(filename='allcpstudents.xlsx'):
 
 def check_channels(slack):
     # these = ['CP1406', 'CP1806', 'CP5632', 'CP5046', 'CP5330']
-    # students, subjects = get_student_data()
+    # students, subjects = get_group_lists()
     channels = get_slack_channels(slack)
     with open("subjects.txt") as f:
         for line in f:
@@ -139,13 +143,12 @@ def test_get_students(pp):
     student_details, all_subjects = get_student_data(STUDENT_FILE)
     pp.pprint(student_details)
 
-# test_get_students()
 
 if __name__ == '__main__':
     main()
 
+# test_get_students()
 # check_channels(slack)
-
 
 # Send a message
 # slack.chat.post_message('#cp1404', 'Hi there. I just sent this message using the Slack API and Python! (from @lindsayward) :)')
