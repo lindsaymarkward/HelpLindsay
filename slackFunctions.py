@@ -6,7 +6,7 @@ __author__ = 'Lindsay Ward'
 
 def get_slack_users(slack, pp):
     """
-    Get all Slack users for a Slack team
+    Get all Slack users for a Slack team, ignoring bots and deleted users
     :param slack: Slacker API object setup for a particular Slack team
     :param pp: Pretty Printer object
     :return: dictionary of {email: (id, username, real name)}
@@ -16,6 +16,9 @@ def get_slack_users(slack, pp):
     users = response.body['members']
     for user in users:
         try:
+            if user['deleted'] or user['is_bot']:
+                # print("*** {} is a bot or deleted user".format(user['name']))
+                continue
             user_details[user['profile']['email']] = (user['id'], user['name'], user['profile']['real_name'])
         except:
             print("Error with: ")
@@ -27,7 +30,7 @@ def get_slack_channels(slack):
     """
     Get all channels from Slack team
     :param slack: Slacker API object setup for a particular Slack team
-    :return: dictionary of {name: (id, [members])}
+    :return: dictionary of {channel name: (id, [members])}
     """
     channel_details = {}
     response = slack.channels.list()
