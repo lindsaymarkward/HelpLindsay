@@ -17,6 +17,7 @@ from slackFunctions import get_slack_groups, get_slack_users
 __author__ = 'Lindsay Ward'
 
 STUDENT_FILE = "data/CP1406-CATME-Teams.csv"
+STAFF_TO_ADD = []  # add email addresses of staff you want to invite to each group
 
 
 def main():
@@ -25,8 +26,8 @@ def main():
 
     # get all students and subjects they do
     groups_students = get_group_lists(STUDENT_FILE)
-    # pp.pprint(groups_students)
-
+    pp.pprint(groups_students)
+    return
     # get all users from Slack
     slack_user_details = get_slack_users(slack, pp)
 
@@ -100,6 +101,10 @@ def get_group_lists(filename):
         except KeyError:
             groups_of_students[group] = [email]
 
+    # add staff members to groups
+    if len(STAFF_TO_ADD) > 0:
+        for group in groups_of_students:
+            groups_of_students[group] += STAFF_TO_ADD
     input_file.close()
     return groups_of_students
 
