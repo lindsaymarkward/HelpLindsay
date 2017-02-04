@@ -18,6 +18,7 @@ SUBJECT_SUBSTITUTIONS = {'CP3413': 'CP2403', 'CP3404': 'CP3302', 'CP5046': 'CP30
                          'CP5637': 'CP3402', 'CP5632': 'CP1404', 'CP5330': 'CP3000', 'CP5340': 'CP3000',
                          'CP5170': 'CP3000', 'CP5030': 'CP3000', 'CP5035': 'CP3000', 'CP2011': 'CP2406',
                          'CP5310': 'CP3003', 'CP5607': 'CP3301'}
+
 STUDENT_FILE = 'data/AllCPstudentsSP22016.xlsx'
 EXCEL_FIELD_LAST_NAME = 2
 EXCEL_FIELD_EMAIL = 6
@@ -122,6 +123,10 @@ def get_student_data(filename='allcpstudents.xlsx'):
         # add "external" as subject for any students whose course is external
         if cell_text[EXCEL_FIELD_EXTERNAL] == "EXT":
             students[email].add("external")
+        # add "sprint" channel for students in Design Thinking, only if not external
+        # TODO: add 3rd year DT subject
+        elif subject in ["CP1403", "CP2408"]:
+            students[email].add("sprint")
 
     return students, all_subjects
 

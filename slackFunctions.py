@@ -16,7 +16,7 @@ def get_slack_users(slack, pp):
     users = response.body['members']
     for user in users:
         try:
-            if user['deleted'] or user['is_bot']:
+            if user['deleted'] or user['is_bot'] or user['id'] == 'USLACKBOT':
                 # print("*** {} is a bot or deleted user".format(user['name']))
                 continue
             user_details[user['profile']['email']] = (user['id'], user['name'], user['profile']['real_name'])
