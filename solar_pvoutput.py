@@ -6,11 +6,10 @@ into a CSV file suitable for pvoutput.org
 import openpyxl
 from pprint import PrettyPrinter
 
-ROW_CURRENT_DATE = 0
+ROW_DATE = 0
 ROW_OUTPUT = 1
 ROW_POWER = 2
 ROW_TIME = 3
-
 EXCEL_FIELD_DATETIME = 0
 EXCEL_FIELD_POWERNOW = 6
 EXCEL_FIELD_ENERGY = 10
@@ -19,7 +18,8 @@ pp = PrettyPrinter(indent=4)
 
 
 def main():
-    # data = get_file_data("data/Solar_201703.xlsx")
+    data = get_file_data("data/Solar_201703.xlsx")
+
     # data = [['2017/03/01', 0, 0, '06:12'],
     #         ['2017/03/01', 0, 137, '07:09'],
     #         ['2017/03/01', 0.2, 281, '08:09'],
@@ -71,11 +71,12 @@ def main():
     #         ['2017/03/04', 18, 335, '17:45']]
     # pp.pprint(data)
     # day_data = reduce_data_to_days(data)
-    day_data = [['2017/03/01', 27.2, 4667, '13:51'],
-                ['2017/03/02', 18.5, 5053, '12:39'],
-                ['2017/03/03', 10.4, 4043, '13:00'],
-                ['2017/03/04', 18.1, 5037, '13:42']]
-    pp.pprint(day_data)
+    day_data = [['2017-03-01', 27.2, 4667, '13:51'],
+                ['2017-03-02', 18.5, 5053, '12:39'],
+                ['2017-03-03', 10.4, 4043, '13:00'],
+                ['2017-03-04', 18.1, 5037, '13:42']]
+    # pp.pprint(day_data)
+    print_for_pvoutput(day_data)
 
 
 def get_file_data(filename='solar.xlsx'):
@@ -88,8 +89,8 @@ def get_file_data(filename='solar.xlsx'):
         # convert cells to text in those cells (.value)
         cell_text = [cell.value for cell in sheet.rows[i]]
         date, time = cell_text[EXCEL_FIELD_DATETIME].split()
-        date = date.replace('.', '/')
-        time = time[:-3]
+        date = date.replace('.', '-')  # format date for pvoutput.org
+        time = time[:-3]  # strip seconds
         row = [date, cell_text[EXCEL_FIELD_ENERGY],
                cell_text[EXCEL_FIELD_POWERNOW], time]
         data.append(row)
@@ -98,18 +99,15 @@ def get_file_data(filename='solar.xlsx'):
 
 def reduce_data_to_days(data):
     """Reduce list of all data elements to list of one valid entry per day."""
-    # data elements look like: [date, time, output]
-    # CSV sample data
-    # date,output(kwh),,,peak_power(w),time
-    # 2011-05-27,13.836,,,2700,11:05
+    # data elements look like: [date, output, power, time]
     day_data = []
     current_date, max_output, peak_power, peak_time = data[0]
     # print(current_date, max_output, peak_power, peak_time)
     for row in data[1:]:
         # check for change of date, update and store entry
-        if row[ROW_CURRENT_DATE] != current_date:
+        if row[ROW_DATE] != current_date:
             day_data.append([current_date, max_output, peak_power, peak_time])
-            current_date = row[ROW_CURRENT_DATE]
+            current_date = row[ROW_DATE]
             peak_power = 0
 
         if row[ROW_POWER] > peak_power:
@@ -121,6 +119,15 @@ def reduce_data_to_days(data):
     # add final row details
     day_data.append([current_date, max_output, peak_power, peak_time])
     return day_data
+
+
+def print_for_pvoutput(day_data):
+    """Print output from nested list in pvoutput.org CSV format."""
+    # CSV sample data
+    # 2011-05-27,13.836,,,2700,11:05
+    # date(yyyy-mm-dd),output(kwh),,,peak_power(w),time(HH:mm)
+    for single_day_data in day_data:
+        print("{},{},,,{},{}".format(*single_day_data))
 
 
 main()
