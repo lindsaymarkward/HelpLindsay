@@ -1,6 +1,7 @@
 """
 Script to invite all students in class list file to the Slack channels for each subject they do
-Takes XLSX file from JCU StaffOnline (subject "CP%")
+Takes unedited XLSX file from JCU StaffOnline (subject "CP%"), download the file,
+then use Excel to save it as an XLSX file.
 """
 import openpyxl
 from pprint import PrettyPrinter
@@ -9,17 +10,20 @@ from slacker import Slacker
 from private import SLACK_AUTH_TOKEN
 from slackFunctions import get_slack_channels, get_slack_users
 
+NONSLACKERS_FILE = "output/nonslackers.txt"
+
 __author__ = 'Lindsay Ward'
 
 SUBJECT_SUBSTITUTIONS = {'CP3413': 'CP2403', 'CP3404': 'CP3302', 'CP5046': 'CP3046', 'CP5047': 'CP3047',
-                         'CP5307': 'CP3307', 'CP5603': 'CP3302', 'CP5604': 'CP2412', 'CP2020': 'CP2412',
+                         'CP5307': 'CP3406', 'CP3307': 'CP3406', 'CP5603': 'CP3302', 'CP5604': 'CP2412', 'CP2020': 'CP2412',
                          'CP5608': 'CP2411', 'CP3403': 'CP3300', 'CP5080': 'honours', 'CP5090': 'honours',
                          'CP5631': 'CP1402', 'CP5633': 'CP2402', 'CP5634': 'CP3300', 'CP5635': 'CP2405',
                          'CP5637': 'CP3402', 'CP5632': 'CP1404', 'CP5330': 'CP3000', 'CP5340': 'CP3000',
                          'CP5170': 'CP3000', 'CP5030': 'CP3000', 'CP5035': 'CP3000', 'CP2011': 'CP2406',
-                         'CP5310': 'CP3003', 'CP5607': 'CP3301'}
+                         'CP5310': 'CP3003', 'CP5607': 'CP3301', 'CP5639': 'CP1401', 'CP5638': 'CP1406',
+                         'CP3101': 'wil', 'CP3102': 'wil', 'CP3103': 'wil'}
 
-STUDENT_FILE = 'data/AllCPstudentsSP22016.xlsx'
+STUDENT_FILE = 'data/allcpstudents.xlsx'
 EXCEL_FIELD_LAST_NAME = 2
 EXCEL_FIELD_EMAIL = 6
 EXCEL_FIELD_SUBJECT = 11
@@ -41,7 +45,8 @@ def main():
     channel_details = get_slack_channels(slack)
     # pp.pprint(channel_details)
 
-    missing = []
+    missing_students = []
+    missing_channels = set()
     invited_count = 0
     # now we can find students not in their subject channels
     for email, subjects in student_details.items():
@@ -49,7 +54,7 @@ def main():
             slack_id = slack_user_details[email][0]
             # print(slack_id, email)
         except KeyError:
-            missing.append(email)
+            missing_students.append(email)
             continue
         for subject in subjects:
             channel = subject_to_channel(subject)
@@ -61,14 +66,17 @@ def main():
                         slack.channels.invite(channel_details[channel][0], slack_id)
                     except:
                         print("ERROR with Slack call, probably missing channel for {}\n".format(channel))
+                        missing_channels.add(channel)
             except:
                 print("ERROR with lookup, probably missing channel for {}\n".format(channel))
 
     print("Invited people {} times".format(invited_count))
-    print("\n{} people not in Slack:\n{}".format(len(missing), "\n".join(missing)))
+    print("\n{} people not in Slack:\n{}".format(len(missing_students), "\n".join(missing_students)))
     # output text file with missing students in form ready for bulk Slack invite (comma separated)
-    with open("nonslackers.txt", "w") as f:
-        f.write(", ".join(missing))
+    with open(NONSLACKERS_FILE, "w") as f:
+        f.write(", ".join(missing_students))
+    if missing_channels:
+        print("\nProblem (probably missing) channels: {}".format("\n".join(missing_channels)))
 
 
 def subject_to_channel(subject):
@@ -124,8 +132,7 @@ def get_student_data(filename='allcpstudents.xlsx'):
         if cell_text[EXCEL_FIELD_EXTERNAL] == "EXT":
             students[email].add("external")
         # add "sprint" channel for students in Design Thinking, only if not external
-        # TODO: add 3rd year DT subject
-        elif subject in ["CP1403", "CP2408"]:
+        elif subject in ["CP1403", "CP2408", "CP3405"]:
             students[email].add("sprint")
 
     return students, all_subjects

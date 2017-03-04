@@ -12,7 +12,7 @@ from icalendar import Calendar, Event
 from datetime import datetime, timedelta
 
 __author__ = 'Lindsay Ward'
-FILE_NAME = "JCU_Weeks.ics"
+FILE_NAME = "output/JCU_Weeks.ics"
 WEEKS_IN_STUDY_PERIOD = 13
 
 
@@ -31,7 +31,8 @@ def create_on_campus_calendar():
         week1text = input(study_period + " Week 1 Date (dd/mm/yy): ")
         week1date = datetime.strptime(week1text, "%d/%m/%y").date()
         lecture_recess_text = input("Lecture Recess Date (dd/mm/yy): ")
-        lecture_recess_date = datetime.strptime(lecture_recess_text, "%d/%m/%y").date()
+        lecture_recess_date = datetime.strptime(lecture_recess_text,
+                                                "%d/%m/%y").date()
 
         # add O Week event (1 week before Week 1)
         event = Event()
@@ -48,7 +49,8 @@ def create_on_campus_calendar():
             if week_date == lecture_recess_date:
                 event.add('summary', study_period + ' Lecture Recess')
             else:
-                event.add('summary', study_period + ' Week ' + str(week_number))
+                event.add('summary',
+                          study_period + ' Week ' + str(week_number))
                 week_number += 1
 
             event.add('dtstart', week_date)
@@ -81,14 +83,17 @@ def create_off_campus_calendar(weeks_in_study_period=10):
     :return:
     """
     # each tuple in the list looks like (study period, week 1 date, week before lecture recess)
-    start_dates = [('SP21/51', '14/03/16', 5), ('SP22/52', '18/07/16', 5), ('SP23/53', '14/11/16', 6)]
+    start_dates = [('SP21/51', '13/03/17', 5), ('SP22/52', '17/07/17', 5),
+                   ('SP23/53', '13/11/17', 5)]
 
     # create "calendar" to add events to
     cal = Calendar()
 
     # loop through study periods (order doesn't matter)
     for study_period, start_date, lecture_recess_week in start_dates:
-        print("{} starts {}, lec rec after week {}".format(study_period, start_date, lecture_recess_week))
+        print("{} starts {}, lec rec after week {}".format(study_period,
+                                                           start_date,
+                                                           lecture_recess_week))
 
         # loop through all numbered weeks
         week_date = datetime.strptime(start_date, "%d/%m/%y").date()
@@ -100,7 +105,8 @@ def create_off_campus_calendar(weeks_in_study_period=10):
             if i == lecture_recess_week:
                 event.add('summary', study_period + ' Lecture Recess')
             else:
-                event.add('summary', "{} Week {}".format(study_period, week_number))
+                event.add('summary',
+                          "{} Week {}".format(study_period, week_number))
                 week_number += 1
 
             event.add('dtstart', week_date)
@@ -113,5 +119,6 @@ def create_off_campus_calendar(weeks_in_study_period=10):
     calendar_file.write(cal.to_ical())
     calendar_file.close()
 
-create_on_campus_calendar()
-# create_off_campus_calendar()
+
+# create_on_campus_calendar()
+create_off_campus_calendar()
