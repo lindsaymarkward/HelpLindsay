@@ -3,7 +3,7 @@ Script to convert Excel file from the Goodwe EzExplorer exported format
 into a CSV file suitable for pvoutput.org
 """
 
-import openpyxl
+import xlrd
 from pprint import PrettyPrinter
 
 EXCEL_FIELD_DATETIME = 0
@@ -19,7 +19,7 @@ pp = PrettyPrinter(indent=4)
 
 def main():
     """Convert Goodwe Excel file to CSV format for pvoutput.org."""
-    data = get_file_data("data/Solar_201703.xlsx")
+    data = get_file_data("data/14600SSU12A00118_201703.xls")
     # data = [['2017/03/01', 0, 0, '06:12'],
     #         ['2017/03/01', 0, 137, '07:09'],
     #         ['2017/03/01', 0.2, 281, '08:09'],
@@ -81,18 +81,18 @@ def main():
 
 def get_file_data(filename='solar.xlsx'):
     """Extract relevant data from file, converting formats."""
-    workbook = openpyxl.load_workbook(filename)
-    sheet = workbook.active
+    workbook = xlrd.open_workbook(filename)
+    sheet = workbook.sheet_by_index(0)
     data = []
-    for i in range(1, sheet.max_row - 1):
+    for i in range(1, sheet.nrows):
         # for i in range(1, 3):
         # convert cells to text in those cells (.value)
-        cell_text = [cell.value for cell in sheet.rows[i]]
-        date, time = cell_text[EXCEL_FIELD_DATETIME].split()
+        row_values = sheet.row_values(i)
+        date, time = row_values[EXCEL_FIELD_DATETIME].split()
         date = date.replace('.', '-')  # format date for pvoutput.org
         time = time[:-3]  # strip seconds
-        row = [date, cell_text[EXCEL_FIELD_ENERGY],
-               cell_text[EXCEL_FIELD_POWERNOW], time]
+        row = [date, row_values[EXCEL_FIELD_ENERGY],
+               row_values[EXCEL_FIELD_POWERNOW], time]
         data.append(row)
     return data
 
