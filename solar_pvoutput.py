@@ -3,8 +3,8 @@ Script to convert Excel file from the Goodwe EzExplorer exported format
 into a CSV file suitable for pvoutput.org
 """
 
-import xlrd
 from pprint import PrettyPrinter
+import xlrd
 
 EXCEL_FIELD_DATETIME = 0
 EXCEL_FIELD_POWERNOW = 6
@@ -14,7 +14,7 @@ ROW_OUTPUT = 1
 ROW_POWER = 2
 ROW_TIME = 3
 
-pp = PrettyPrinter(indent=4)
+PP = PrettyPrinter(indent=4)
 
 
 def main():
