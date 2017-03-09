@@ -6,20 +6,20 @@ into a CSV file suitable for pvoutput.org
 import openpyxl
 from pprint import PrettyPrinter
 
+EXCEL_FIELD_DATETIME = 0
+EXCEL_FIELD_POWERNOW = 6
+EXCEL_FIELD_ENERGY = 10
 ROW_DATE = 0
 ROW_OUTPUT = 1
 ROW_POWER = 2
 ROW_TIME = 3
-EXCEL_FIELD_DATETIME = 0
-EXCEL_FIELD_POWERNOW = 6
-EXCEL_FIELD_ENERGY = 10
 
 pp = PrettyPrinter(indent=4)
 
 
 def main():
+    """Convert Goodwe Excel file to CSV format for pvoutput.org."""
     data = get_file_data("data/Solar_201703.xlsx")
-
     # data = [['2017/03/01', 0, 0, '06:12'],
     #         ['2017/03/01', 0, 137, '07:09'],
     #         ['2017/03/01', 0.2, 281, '08:09'],
@@ -70,11 +70,11 @@ def main():
     #         ['2017/03/04', 17.5, 750, '16:45'],
     #         ['2017/03/04', 18, 335, '17:45']]
     # pp.pprint(data)
-    # day_data = reduce_data_to_days(data)
-    day_data = [['2017-03-01', 27.2, 4667, '13:51'],
-                ['2017-03-02', 18.5, 5053, '12:39'],
-                ['2017-03-03', 10.4, 4043, '13:00'],
-                ['2017-03-04', 18.1, 5037, '13:42']]
+    day_data = reduce_data_to_days(data)
+    # day_data = [['2017-03-01', 27.2, 4667, '13:51'],
+    #             ['2017-03-02', 18.5, 5053, '12:39'],
+    #             ['2017-03-03', 10.4, 4043, '13:00'],
+    #             ['2017-03-04', 18.1, 5037, '13:42']]
     # pp.pprint(day_data)
     print_for_pvoutput(day_data)
 
