@@ -6,15 +6,13 @@ testQuestions/
 data/
 output/
 
-data/databaseDetails.txt
 logins.txt
 messages.txt
 nonslackers.txt
 slackEmails.txt
 slackEmails2.txt
 slackInviteResults.txt
-subjects.txt
-testQuestions/things.txt
+data/subjects.txt
 test.py
 justtesting.py
 private.py

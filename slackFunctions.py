@@ -1,14 +1,15 @@
 """
 Generic (reusable) Slack functions for programs that use Slacker API
 """
-__author__ = 'Lindsay Ward'
+from pprint import PrettyPrinter
+
+PP = PrettyPrinter(indent=4)  # used for testing and error messages
 
 
-def get_slack_users(slack, pp):
+def get_slack_users(slack):
     """
     Get all Slack users for a Slack team, ignoring bots and deleted users
     :param slack: Slacker API object setup for a particular Slack team
-    :param pp: Pretty Printer object
     :return: dictionary of {email: (id, username, real name)}
     """
     user_details = {}
@@ -19,10 +20,11 @@ def get_slack_users(slack, pp):
             if user['deleted'] or user['is_bot'] or user['id'] == 'USLACKBOT':
                 # print("*** {} is a bot or deleted user".format(user['name']))
                 continue
-            user_details[user['profile']['email']] = (user['id'], user['name'], user['profile']['real_name'])
+            user_details[user['profile']['email']] = (
+            user['id'], user['name'], user['profile']['real_name'])
         except:
             print("Error with: ")
-            pp.pprint(user)
+            PP.pprint(user)
     return user_details
 
 
