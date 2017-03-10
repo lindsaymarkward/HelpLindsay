@@ -46,7 +46,7 @@ def create_login_dictionary():
 
 def create_password_dictionary():
     logins_passwords = {}
-    with open('databaseDetails.txt') as f:
+    with open('data/databaseDetails.txt') as f:
         for line in f:
             parts = line.split()
             logins_passwords[parts[0]] = parts[1]

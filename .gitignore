@@ -1,16 +1,12 @@
 
 .idea/
 __pycache__/
+private.pyc
 testQuestions/
 data/
-*.xlsx
-*.xls
-*.csv
-*.html
+output/
 
-JCU_Weeks.ics
-test.ics
-databaseDetails.txt
+data/databaseDetails.txt
 logins.txt
 messages.txt
 nonslackers.txt
@@ -18,7 +14,7 @@ slackEmails.txt
 slackEmails2.txt
 slackInviteResults.txt
 subjects.txt
-things.txt
+testQuestions/things.txt
 test.py
 justtesting.py
 private.py
@@ -26,3 +22,6 @@ quiznight6.py
 slackTest.py
 smsTelstraPrivate.py
 smsTestsTwilio.py
+sms_test_post.html
+stackOverflowHelp.py
+tryout_xlrd.py
