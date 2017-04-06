@@ -10,23 +10,8 @@ from private import SLACK_AUTH_TOKEN
 from slackFunctions import get_slack_channels, get_slack_users, PP
 
 
-SUBJECT_SUBSTITUTIONS = {'CP3413': 'CP2403', 'CP3404': 'CP3302',
-                         'CP5046': 'CP3046', 'CP5047': 'CP3047',
-                         'CP5307': 'CP3406', 'CP3307': 'CP3406',
-                         'CP5603': 'CP3302', 'CP5604': 'CP2412',
-                         'CP2020': 'CP2412', 'CP5638': 'CP1406',
-                         'CP5608': 'CP2411', 'CP3403': 'CP3300',
-                         'CP5631': 'CP1402', 'CP5633': 'CP2402',
-                         'CP5634': 'CP3300', 'CP5635': 'CP2405',
-                         'CP5637': 'CP3402', 'CP5632': 'CP1404',
-                         'CP2011': 'CP2406', 'CP5310': 'CP3003',
-                         'CP5607': 'CP3301', 'CP5639': 'CP1401',
-                         'CP5080': 'honours', 'CP5090': 'honours',
-                         'CP3000': 'specialtopics', 'CP5330': 'specialtopics',
-                         'CP5340': 'specialtopics', 'CP5170': 'specialtopics',
-                         'CP5030': 'specialtopics', 'CP5035': 'specialtopics',
-                         'CP3101': 'wil', 'CP3102': 'wil', 'CP3103': 'wil'}
 DESIGN_THINKING_SUBJECTS = ["CP1403", "CP2408", "CP3405"]
+SUBSTITUTIONS_FILE = 'data/subject_substitutions.txt'
 STUDENT_FILE = 'data/Classlist_Results.xls'
 NONSLACKERS_FILE = "output/nonslackers.txt"
 EXCEL_FIELD_FIRST_NAME = 2
@@ -49,6 +34,7 @@ def main():
     # get channels (names and ids)
     channel_details = get_slack_channels(slack)
 
+    substitutions = create_substitutions()
     missing_students = []
     missing_channels = set()
     invited_count = 0
@@ -60,7 +46,7 @@ def main():
             missing_students.append(email)
             continue
         for subject in subjects:
-            channel = subject_to_channel(subject)
+            channel = subject_to_channel(subject, substitutions)
             try:
                 if slack_id not in channel_details[channel][1]:
                     print("inviting", email, "to", channel)
@@ -89,9 +75,19 @@ def main():
             "\n".join(missing_channels)))
 
 
-def subject_to_channel(subject):
+def create_substitutions(filename=SUBSTITUTIONS_FILE):
+    substitutions = {}
+    with open(filename) as f:
+        for line in f:
+            subject, subject_channel = line.split()
+            substitutions[subject] = subject_channel
+    return substitutions
+
+
+def subject_to_channel(subject, substitutions):
     """
     Convert subject to Slack channel name, including substituting for shared channels
+    :param substitutions:
     :param subject: original subject name to convert, e.g. "CP1804"
     :return: Slack channel name, e.g. "cp1404"
     """
@@ -100,8 +96,8 @@ def subject_to_channel(subject):
         subject = "CP14" + subject[4:]
     elif subject.startswith("CP4"):
         subject = "honours"
-    elif subject in SUBJECT_SUBSTITUTIONS:
-        subject = SUBJECT_SUBSTITUTIONS[subject]
+    elif subject in substitutions:
+        subject = substitutions[subject]
     return subject.lower()
 
 
@@ -155,11 +151,12 @@ def check_channels():
     slack = Slacker(SLACK_AUTH_TOKEN)
     # these = ['CP1406', 'CP1806', 'CP5632', 'CP5046', 'CP5330']
     # students, subjects = get_group_lists()
+    substitutions = create_substitutions()
     channels = get_slack_channels(slack)
     with open("data/subjects.txt") as f:
         for line in f:
             s = line[:6]
-            channel = subject_to_channel(s)
+            channel = subject_to_channel(s, substitutions)
             if channel not in channels:
                 print("ERROR", channel)
 
@@ -173,6 +170,7 @@ def test_get_students():
 if __name__ == '__main__':
     main()
 
+# print(create_substitutions())
 # test_get_students()
 # check_channels()
 

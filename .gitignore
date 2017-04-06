@@ -6,12 +6,9 @@ testQuestions/
 data/
 output/
 
-logins.txt
-messages.txt
-nonslackers.txt
+output/nonslackers_170310_invited.txt
 slackEmails.txt
 slackEmails2.txt
-slackInviteResults.txt
 data/subjects.txt
 test.py
 justtesting.py
