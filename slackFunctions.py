@@ -56,6 +56,16 @@ def get_slack_groups(slack):
     return group_details
 
 
+def rename_groups(slack, from_prefix, to_prefix):
+    """Rename all groups starting with from_prefix to start with to_prefix."""
+    slack_groups = get_slack_groups(slack)
+    for group_name, details in slack_groups.items():
+        if group_name.startswith(from_prefix):
+            new_name = group_name.replace(from_prefix, to_prefix)
+            print(group_name, "->", new_name)
+            slack.groups.rename(details[0], new_name)
+
+
 def clear_purposes(slack, group_ids):
     """
     Clear the purposes field of groups listed in filename

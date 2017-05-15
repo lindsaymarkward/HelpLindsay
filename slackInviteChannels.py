@@ -1,7 +1,6 @@
 """
 Script to invite all students in class list file to the Slack channels for each subject they do
-Takes unedited XLSX file from JCU StaffOnline (subject "CP%"), download the file,
-then use Excel to save it as an XLSX file.
+Takes unedited XLS file from JCU StaffOnline (subject "CP%"), download the file
 """
 import xlrd
 from slacker import Slacker

@@ -1,6 +1,6 @@
 """
 Script to convert Excel file from the Goodwe EzExplorer exported format
-into a CSV file suitable for pvoutput.org
+into CSV-style output suitable for pvoutput.org
 """
 
 from pprint import PrettyPrinter
@@ -80,13 +80,11 @@ def main():
 
 
 def get_file_data(filename='solar.xlsx'):
-    """Extract relevant data from file, converting formats."""
+    """Extract all data from file into a list, converting formats."""
     workbook = xlrd.open_workbook(filename)
     sheet = workbook.sheet_by_index(0)
     data = []
     for i in range(1, sheet.nrows):
-        # for i in range(1, 3):
-        # convert cells to text in those cells (.value)
         row_values = sheet.row_values(i)
         date, time = row_values[EXCEL_FIELD_DATETIME].split()
         date = date.replace('.', '-')  # format date for pvoutput.org
@@ -98,26 +96,24 @@ def get_file_data(filename='solar.xlsx'):
 
 
 def reduce_data_to_days(data):
-    """Reduce list of all data elements to list of one valid entry per day."""
-    # data elements look like: [date, output, power, time]
+    """Reduce all data to list of one aggregate entry per day."""
+    # data elements look like: [date, total_output, power, time]
     day_data = []
-    current_date, max_output, peak_power, peak_time = data[0]
-    # print(current_date, max_output, peak_power, peak_time)
+    current_date, total_output, peak_power, peak_time = data[0]
     for row in data[1:]:
         # check for change of date, update and store entry
         if row[ROW_DATE] != current_date:
-            day_data.append([current_date, max_output, peak_power, peak_time])
+            day_data.append([current_date, total_output, peak_power, peak_time])
             current_date = row[ROW_DATE]
             peak_power = 0
-
+        # update peak power and time
         if row[ROW_POWER] > peak_power:
             peak_power = row[ROW_POWER]
             peak_time = row[ROW_TIME]
-
-        # save max_output so it's for the previous record when adding
-        max_output = row[ROW_OUTPUT]
+        # save total_output so it's for the previous record when adding
+        total_output = row[ROW_OUTPUT]
     # add final row details
-    day_data.append([current_date, max_output, peak_power, peak_time])
+    day_data.append([current_date, total_output, peak_power, peak_time])
     return day_data
 
 

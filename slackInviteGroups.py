@@ -15,7 +15,7 @@ from slackFunctions import get_slack_groups, get_slack_users
 
 __author__ = 'Lindsay Ward'
 
-STUDENT_FILE = "data/cp3402groups.csv"
+STUDENT_FILE = "data/cp1406groups.csv"
 
 
 def main():
@@ -82,7 +82,7 @@ def main():
     print("\n{} people not in Slack:\n{}".format(len(missing),
                                                  "\n".join(missing)))
     # output text file with missing students in form ready for bulk Slack invite (comma separated)
-    with open("output/nonslackers.txt", "w") as f:
+    with open("output/nonslacker_groups.txt", "w") as f:
         f.write(", ".join(missing))
 
 
@@ -101,18 +101,22 @@ def get_group_lists(filename):
     # print(header)
     column_email = header.index('email')
     column_group = header.index('team')
-    column_first_name = header.index('first')
-    column_last_name = header.index('last')
+    # column_first_name = header.index('first')
+    # column_last_name = header.index('last')
     # print("Email: {}, Team: {}, Name: {} {}".format(column_email, column_group, column_first_name, column_last_name))
 
     for row in csv_reader:
         # print(row)
         group = row[column_group]
+        # skip blank groups (for unfinished data file)
+        if not group:
+            continue
         email = row[column_email]
-        name = "{} {}".format(row[column_first_name], row[column_last_name])
+        # name = "{} {}".format(row[column_first_name], row[column_last_name])
         # print(group, name, email)
 
-        # update existing group's list, or add student to dictionary if not already there
+        # update existing group's list,
+        # or add student to new entry in dictionary if not already there
         try:
             groups_of_students[group].append(email)
         except KeyError:
