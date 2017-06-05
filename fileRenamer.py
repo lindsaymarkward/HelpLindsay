@@ -9,10 +9,8 @@ import os
 
 # Remove start (from LearnJCU)
 LENGTH_OF_TEXT_TO_REMOVE = 28
-START_TEXT = "CP5632 Report and Presentation_"
-DIRECTORY = "/Users/sci-lmw1/GoogleDrive/CP1404/CP1404 2016-1/Assessment/CP5632 Report Submissions"
-
-
+START_TEXT = "Assessment Task 1 - Initial Project Plan_"
+DIRECTORY = "/Users/sci-lmw1/Downloads/DT_A1"
 
 os.chdir(DIRECTORY)
 for filename in os.listdir('.'):
@@ -25,12 +23,11 @@ for filename in os.listdir('.'):
         newName = filename.replace(START_TEXT, "")
         # find start of "attempt" and remove it and date/time that follows (LENGTH_OF_TEXT_TO_REMOVE characters)
         start = newName.find("attempt")
-        newName = newName.replace(newName[start:start + LENGTH_OF_TEXT_TO_REMOVE], "")
+        newName = newName.replace(
+            newName[start:start + LENGTH_OF_TEXT_TO_REMOVE], "")
         # when testing, I use the print line and comment out the rename line, then I swap them over
         os.rename(filename, newName)
         # print(newName)
-
-
 
 """
 # Replace %20 with space

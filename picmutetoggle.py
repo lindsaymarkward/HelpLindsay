@@ -17,27 +17,30 @@ close file
 close serial port
 """
 
-import serial, os, time
+import os
+import serial
+import time
 
-#setup serial port
+# setup serial port
+COMMAND_MUTE_OFF = "kd 0 0\r"
+COMMAND_MUTE_ON = "kd 0 1\r"
 serial_connection = serial.Serial("/dev/ttyUSB0", 9600, timeout=1)
 
 os.chdir("/home/lindsay/scripts")
-inFile = open("picmutestatus.txt", 'r')
-status = inFile.readline().strip()
-inFile.close()
+in_file = open("picmutestatus.txt", 'r')
+status = in_file.readline().strip()
+in_file.close()
 
-outFile = open("picmutestatus.txt", 'w')
+out_file = open("picmutestatus.txt", 'w')
 if status == "off":
     # send serial command for TV picture mute on
-    serial_connection.write("kd 0 1\r")
-    outFile.write("on")
+    serial_connection.write(COMMAND_MUTE_ON)
+    out_file.write("on")
 else:
     # send serial command for TV picture mute off
-    serial_connection.write("kd 0 0\r")
-    outFile.write("off")
+    serial_connection.write(COMMAND_MUTE_OFF)
+    out_file.write("off")
 
 time.sleep(0.1)
-outFile.close()
+out_file.close()
 serial_connection.close()
-
