@@ -21,9 +21,10 @@ import os
 import serial
 import time
 
-# setup serial port
 COMMAND_MUTE_OFF = "kd 0 0\r"
 COMMAND_MUTE_ON = "kd 0 1\r"
+
+# setup serial port
 serial_connection = serial.Serial("/dev/ttyUSB0", 9600, timeout=1)
 
 os.chdir("/home/lindsay/scripts")
