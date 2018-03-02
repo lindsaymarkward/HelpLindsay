@@ -9,13 +9,15 @@ import os
 
 # Remove start (from LearnJCU)
 LENGTH_OF_TEXT_TO_REMOVE = 28
-START_TEXT = "Assessment Task 1 - Initial Project Plan_"
-DIRECTORY = "/Users/sci-lmw1/Downloads/DT_A1"
+START_TEXT = "Assessment Item 4_"
+DIRECTORY = "/Users/sci-lmw1/Downloads/DT"
 
 os.chdir(DIRECTORY)
 for filename in os.listdir('.'):
     # print(filename)
-    if filename.startswith(START_TEXT):
+    if filename.endswith('.txt'):
+        os.remove(filename)
+    elif filename.startswith(START_TEXT):
         # Remove LearnJCU's massive file name text and also the "attempt" text
         newName = filename.replace(START_TEXT, "")
         # Find start of "attempt" and remove it and date/time that follows

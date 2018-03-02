@@ -83,8 +83,8 @@ def create_off_campus_calendar(weeks_in_study_period=10):
     :return:
     """
     # each tuple in the list looks like (study period, week 1 date, week before lecture recess)
-    start_dates = [('SP21/51', '13/03/17', 5), ('SP22/52', '17/07/17', 5),
-                   ('SP23/53', '13/11/17', 5)]
+    # start_dates = [('SP21/51', '13/03/17', 5), ('SP22/52', '17/07/17', 5), ('SP23/53', '13/11/17', 5)]
+    start_dates = [('SP21/51', '12/03/18', 5), ('SP22/52', '09/07/18', 5), ('SP23/53', '05/11/18', 6)]
 
     # create "calendar" to add events to
     cal = Calendar()

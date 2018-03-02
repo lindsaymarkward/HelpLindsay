@@ -5,6 +5,8 @@ You can check for replies manually, or specify a callback (at the Telstra dev we
 
 Lindsay Ward
 21/12/2015
+
+UPDATE 27/02/2018: (old API shut down) To get access to the new Messaging API please register on the new developer portal https://dev.telstra.com/ and you’ll get access to our free-tier of the Messaging API.
 """
 # Obtained these keys from the Telstra Developer Portal - https://dev.telstra.com/user/me/apps
 from private import TELSTRA_CONSUMER_KEY, TELSTRA_CONSUMER_SECRET

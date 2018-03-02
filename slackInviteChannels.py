@@ -36,6 +36,7 @@ def main():
 
     # get channels like {channel name: (id, [members])}
     channel_details = get_slack_channels(slack)
+    # PP.pprint(channel_details)
 
     # optionally, clear out non-enrolled students
     if REMOVE_OLD_STUDENTS:
@@ -57,23 +58,20 @@ def main():
             missing_students.add(email)
             continue
         for subject in subjects:
-            channel = subject_to_channel(subject, substitutions)
+            channel_name = subject_to_channel(subject, substitutions)
             try:
-                if slack_id not in channel_details[channel][1]:
-                    print("inviting", email, "to", channel)
+                # print(email, slack_id, channel_name)
+                # PP.pprint(channel_details[channel_name])
+                if slack_id not in channel_details[channel_name][1]:
+                    print("inviting", email, "to", channel_name)
                     invited_count += 1
                     try:
-                        slack.channels.invite(channel_details[channel][0],
-                                              slack_id)
-                    except:
-                        print(
-                            "ERROR with Slack call, probably missing channel for {}\n".format(
-                                channel))
-                        missing_channels.add(channel)
-            except:
-                print(
-                    "ERROR with lookup, probably missing channel for {}\n".format(
-                        channel))
+                        slack.channels.invite(channel_details[channel_name][0], slack_id)
+                    except Exception as error:
+                        print("ERROR inviting ({})\n".format(error))
+                        missing_channels.add(channel_name)
+            except Exception as error:
+                print("ERROR with {} lookup ({})\n".format(channel_name, error))
 
     print("Invited people {} times".format(invited_count))
     print("\n{} people not in Slack:\n{}".format(len(missing_students),
@@ -83,7 +81,7 @@ def main():
     with open(NONSLACKERS_FILE, "w") as f:
         f.write(", ".join(missing_students))
     if missing_channels:
-        print("\nProblem (probably missing) channels: {}".format(
+        print("\nProblem (probably missing) channels: {}\n".format(
             "\n".join(missing_channels)))
 
 
@@ -168,12 +166,13 @@ def check_channels():
     # these = ['CP1406', 'CP1806', 'CP5632', 'CP5046', 'CP5330']
     # students, subjects = get_group_lists()
     substitutions = create_substitutions()
-    channels = get_slack_channels(slack)
+    channel_details = get_slack_channels(slack)
+    # PP.pprint(channel_details['cp1404'])
     with open("data/subjects.txt") as f:
         for line in f:
-            s = line[:6]
-            channel = subject_to_channel(s, substitutions)
-            if channel not in channels:
+            subject_name = line[:6]
+            channel = subject_to_channel(subject_name, substitutions)
+            if channel not in channel_details:
                 print("ERROR", channel)
 
 
@@ -190,17 +189,19 @@ def remove_students(slack, all_channel_details, slack_user_details,
     with open(staff_filename) as staff_file:
         staff_emails = set([email.strip() for email in staff_file.readlines()])
 
-    # filter channel dictionary to just subject and sprint channels
+    # filter channel dictionary to just subject and sprint + specialtopics channels
     subject_channel_details = {name: value for name, value in
                                all_channel_details.items() if
                                name.startswith("cp")}
     subject_channel_details["sprint"] = all_channel_details.get("sprint")
+    subject_channel_details["specialtopics"] = all_channel_details.get("specialtopics")
     # PP.pprint(subject_channel_details)
 
     staff_details = {email: details for email, details in
                      slack_user_details.items() if email in staff_emails}
     # PP.pprint(staff_details)
 
+    # get just the staff IDs into a set
     staff_ids = set(values[0] for values in staff_details.values())
     for channel_name, channel_details in subject_channel_details.items():
         channel_id = channel_details[0]
@@ -221,6 +222,6 @@ def remove_students(slack, all_channel_details, slack_user_details,
 if __name__ == '__main__':
     main()
 
-# print(create_substitutions())
-# test_get_students()
-# check_channels()
+    # print(create_substitutions())
+    # test_get_students()
+    # check_channels()

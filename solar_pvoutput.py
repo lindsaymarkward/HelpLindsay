@@ -6,7 +6,8 @@ into CSV-style output suitable for pvoutput.org
 from pprint import PrettyPrinter
 import xlrd
 
-FILENAME = "data/14600SSU12A00118_201703.xls"
+# FILENAME = "data/14600SSU12A00118_201703.xls"
+FILENAME = "data/14600SSU12A00118_201711.xls"
 EXCEL_FIELD_DATETIME = 0
 EXCEL_FIELD_POWERNOW = 6
 EXCEL_FIELD_ENERGY = 10
