@@ -3,10 +3,10 @@ Script to invite all students in class list file to the Slack channels for each 
 Takes unedited XLS file from JCU StaffOnline (subject "CP%"), download the file
 """
 import xlrd
-from slacker import Slacker
+from slackclient import SlackClient
 
 from private import SLACK_AUTH_TOKEN
-from slackFunctions import get_slack_channels, get_slack_users, PP
+from slackFunctions import get_slack_channels_members, get_slack_users, PP, get_slack_channels
 
 DESIGN_THINKING_SUBJECTS = ["CP1403", "CP2408", "CP3405"]
 SUBSTITUTIONS_FILE = 'data/subject_substitutions.txt'
@@ -26,31 +26,29 @@ REMOVE_OLD_STUDENTS = False
 
 def main():
     # make Slack API connection
-    slack = Slacker(SLACK_AUTH_TOKEN)
+    sc = SlackClient(SLACK_AUTH_TOKEN)
 
     # get all students and subjects they do
     student_details, all_subjects = get_student_data(STUDENT_FILE)
 
     # get users from Slack like {email: (id, username, real name)}
-    slack_user_details = get_slack_users(slack)
+    slack_user_details = get_slack_users(sc)
 
     # get channels like {channel name: (id, [members])}
-    channel_details = get_slack_channels(slack)
+    channel_details = get_slack_channels_members(sc)
     # PP.pprint(channel_details)
 
     # optionally, clear out non-enrolled students
     if REMOVE_OLD_STUDENTS:
         print("Removing all students from subject channels")
-        remove_students(slack, channel_details, slack_user_details,
-                        student_details, STAFF_FILE)
-
-    # return
+        remove_students(sc, channel_details, slack_user_details, STAFF_FILE)
 
     substitutions = create_substitutions()
     missing_students = set()
     missing_channels = set()
     invited_count = 0
     # now we can find students not in their subject channels
+    # TODO: (one day) You can add multiple users as once, so determine first who to add
     for email, subjects in student_details.items():
         try:
             slack_id = slack_user_details[email][0]
@@ -60,13 +58,15 @@ def main():
         for subject in subjects:
             channel_name = subject_to_channel(subject, substitutions)
             try:
+                channel_id = channel_details[channel_name][0]
+                members = channel_details[channel_name][1]
                 # print(email, slack_id, channel_name)
                 # PP.pprint(channel_details[channel_name])
-                if slack_id not in channel_details[channel_name][1]:
-                    print("inviting", email, "to", channel_name)
+                if slack_id not in members:
+                    print("Inviting {} to {}".format(email, channel_name))
                     invited_count += 1
                     try:
-                        slack.channels.invite(channel_details[channel_name][0], slack_id)
+                        sc.api_call("conversations.invite", channel=channel_id, users=[slack_id])
                     except Exception as error:
                         print("ERROR inviting ({})\n".format(error))
                         missing_channels.add(channel_name)
@@ -75,7 +75,7 @@ def main():
 
     print("Invited people {} times".format(invited_count))
     print("\n{} people not in Slack:\n{}".format(len(missing_students),
-                                                 "\n".join(missing_students)))
+                                                 ", ".join(missing_students)))
     # output text file with missing students
     # in form ready for bulk Slack invite (comma separated)
     with open(NONSLACKERS_FILE, "w") as f:
@@ -162,7 +162,7 @@ def get_student_data(filename=STUDENT_FILE):
 
 def check_channels():
     """Check for missing subject channels based on input file."""
-    slack = Slacker(SLACK_AUTH_TOKEN)
+    slack = SlackClient(SLACK_AUTH_TOKEN)
     # these = ['CP1406', 'CP1806', 'CP5632', 'CP5046', 'CP5330']
     # students, subjects = get_group_lists()
     substitutions = create_substitutions()
@@ -182,20 +182,19 @@ def test_get_students():
     PP.pprint(student_details)
 
 
-def remove_students(slack, all_channel_details, slack_user_details,
-                    student_details, staff_filename=STAFF_FILE):
+def remove_students(client, all_channel_details, slack_user_details,
+                    staff_filename=STAFF_FILE):
     """Remove students (not staff) from subject channels not enrolled in."""
-    staff_emails = set()
     with open(staff_filename) as staff_file:
         staff_emails = set([email.strip() for email in staff_file.readlines()])
 
-    # filter channel dictionary to just subject and sprint + specialtopics channels
+    # filter channel dictionary to just subject and selected channels
     subject_channel_details = {name: value for name, value in
                                all_channel_details.items() if
                                name.startswith("cp")}
     subject_channel_details["sprint"] = all_channel_details.get("sprint")
     subject_channel_details["specialtopics"] = all_channel_details.get("specialtopics")
-    PP.pprint(subject_channel_details)
+    # PP.pprint(subject_channel_details)
 
     staff_details = {email: details for email, details in
                      slack_user_details.items() if email in staff_emails}
@@ -213,7 +212,7 @@ def remove_students(slack, all_channel_details, slack_user_details,
         # PP.pprint(students_to_remove)
         for student_id in students_to_remove:
             try:
-                slack.channels.kick(channel_id, student_id)
+                client.api_call("conversations.kick", channel=channel_id, user=student_id)
                 count += 1
             except Exception as error:
                 print("Error: {}".format(error))
