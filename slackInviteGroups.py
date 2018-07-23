@@ -15,7 +15,7 @@ from slackFunctions import get_slack_groups, get_slack_users
 
 __author__ = 'Lindsay Ward'
 
-STUDENT_FILE = "data/cp1406groups.csv"
+STUDENT_FILE = "data/cp3402groups.csv"
 
 
 def main():

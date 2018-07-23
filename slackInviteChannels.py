@@ -195,7 +195,7 @@ def remove_students(slack, all_channel_details, slack_user_details,
                                name.startswith("cp")}
     subject_channel_details["sprint"] = all_channel_details.get("sprint")
     subject_channel_details["specialtopics"] = all_channel_details.get("specialtopics")
-    # PP.pprint(subject_channel_details)
+    PP.pprint(subject_channel_details)
 
     staff_details = {email: details for email, details in
                      slack_user_details.items() if email in staff_emails}
@@ -203,6 +203,7 @@ def remove_students(slack, all_channel_details, slack_user_details,
 
     # get just the staff IDs into a set
     staff_ids = set(values[0] for values in staff_details.values())
+
     for channel_name, channel_details in subject_channel_details.items():
         channel_id = channel_details[0]
         channel_members = channel_details[1]
