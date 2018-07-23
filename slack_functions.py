@@ -71,11 +71,9 @@ def get_slack_groups(client):
     :param client: SlackClient API object setup for a particular Slack team
     :return: dictionary of {group name: (id, [members])}
     """
-    print("Not yet implemented")
-    return {}
     group_details = {}
-    response = client.groups.list()
-    groups = response.body['groups']
+    response = client.api_call("groups.list", exclude_archived=True)
+    groups = response['groups']
     for group in groups:
         group_details[group['name']] = (group['id'], group['members'])
     return group_details
@@ -83,27 +81,23 @@ def get_slack_groups(client):
 
 def rename_groups(client, from_prefix, to_prefix):
     """Rename all groups starting with from_prefix to start with to_prefix."""
-    print("Not yet implemented")
-    return
     slack_groups = get_slack_groups(client)
     for group_name, details in slack_groups.items():
         if group_name.startswith(from_prefix):
             new_name = group_name.replace(from_prefix, to_prefix)
             print(group_name, "->", new_name)
-            client.groups.rename(details[0], new_name)
+            client.api_call("groups.rename", channel=details[0], name=new_name)
 
 
 def clear_purposes(client, group_ids):
     """
-    Clear the purposes field of groups listed in filename
+    Clear the purposes field of groups passed in
     :param client: SlackClient API object setup for a particular Slack team
-    :param group_ids: set of group ids to clear
+    :param group_ids: list of group ids to clear the purposes of
     :return: None
     """
-    print("Not yet implemented")
-    return
     for group_id in group_ids:
-        client.groups.set_purpose(group_id, "")
+        client.api_call("groups.setPurpose", channel=group_id, purpose="")
 
 
 def kick_members(client, channel_id, members, members_to_keep):
@@ -141,6 +135,12 @@ def test_something():
     # members = response['members']
     # PP.pprint(members)
     # kick_members(sc, temp_channel_id, members, {ID_LINDSAY})
+
+    # results = get_slack_groups(sc)
+    # PP.pprint(results)
+    # rename_groups(sc, "cool-", "test-")
+    # clear_purposes(sc, ['GA0FEB1GC', 'G0CJ9THRA'])
+    test_group_id = 'G0CJ9THRA'
 
 
 if __name__ == '__main__':

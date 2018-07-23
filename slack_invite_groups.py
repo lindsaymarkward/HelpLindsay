@@ -1,17 +1,17 @@
 """
 Script to invite students to Slack private groups for group work
-Takes CSV file in the same format as that needed for CATME: http://catme.org
+Takes CSV file in the same format as that needed for CATME:
+https://info.catme.org/instructor-faqhelptext-and-troubleshooting/#faq-772
 Match the team names in the CATME file with the private group names for Slack
-Specify the email address for any staff to be added to all groups
-in the private file
+Specify the email address for any staff to be added to all groups in the private file
 """
 
 import csv
 from pprint import PrettyPrinter
-from slacker import Slacker
+from slackclient import SlackClient
 
 from private import SLACK_AUTH_TOKEN, STAFF_TO_ADD
-from slackFunctions import get_slack_groups, get_slack_users
+from slack_functions import get_slack_groups, get_slack_users
 
 __author__ = 'Lindsay Ward'
 
@@ -19,7 +19,7 @@ STUDENT_FILE = "data/cp3402groups.csv"
 
 
 def main():
-    slack = Slacker(SLACK_AUTH_TOKEN)
+    client = SlackClient(SLACK_AUTH_TOKEN)
     # pp = PrettyPrinter(indent=4)
 
     # get all students and their groups
@@ -27,13 +27,13 @@ def main():
     # pp.pprint(groups_students)
 
     # get all users from Slack
-    slack_user_details = get_slack_users(slack)
+    slack_user_details = get_slack_users(client)
 
     # get all groups like {'name': (group ID, [member IDs])}
-    group_details = get_slack_groups(slack)
+    group_details = get_slack_groups(client)
     # pp.pprint(group_details)
 
-    missing = []
+    missing_students = []
     invited_count = 0
 
     for group_name, students in groups_students.items():
@@ -43,12 +43,13 @@ def main():
             group_id = group_details[group_name][0]
         except KeyError:
             print("No {} group. Adding it now.".format(group_name))
-            response = slack.groups.create(group_name)
+            response = client.api_call("groups.create", name=group_name)
             try:
                 # add new group details to current groups dictionary in same format (id, [members])
-                group_id = response.body['group']['id']
+                group_id = response['group']['id']
                 group_details[group_name] = (group_id, [])
-            except:
+            except Exception as error:
+                print(error)
                 print("Creating group {} failed. Exiting.".format(group_name))
                 return False
 
@@ -59,7 +60,7 @@ def main():
                 slack_id = slack_user_details[email][0]
                 # print(group, slack_id, email)
             except KeyError:
-                missing.append(email)
+                missing_students.append(email)
                 continue
 
             # invite students to their groups
@@ -68,22 +69,20 @@ def main():
                     print("Inviting {} to {}".format(email, group_name))
                     invited_count += 1
                     try:
-                        slack.groups.invite(group_id, slack_id)
-                    except:
-                        print(
-                            "ERROR with Slack call. Maybe missing group {} or user {}\n".format(
-                                group_name, email))
-            except:
-                print(
-                    "ERROR with lookup, probably missing group for {}\n".format(
-                        group_name))
+                        client.api_call("groups.invite", channel=group_id, user=slack_id)
+                    except Exception as error:
+                        print(error)
+                        print("ERROR inviting {} to {}\n".format(email, group_name))
+            except Exception as error:
+                print(error)
+                print("ERROR with lookup, missing group {}?\n".format(group_name))
 
     print("Invited people {} times".format(invited_count))
-    print("\n{} people not in Slack:\n{}".format(len(missing),
-                                                 "\n".join(missing)))
+    print("\n{} people not in Slack:\n{}".format(len(missing_students),
+                                                 "\n".join(missing_students)))
     # output text file with missing students in form ready for bulk Slack invite (comma separated)
     with open("output/nonslacker_groups.txt", "w") as f:
-        f.write(", ".join(missing))
+        f.write(", ".join(missing_students))
 
 
 def get_group_lists(filename):
@@ -130,18 +129,16 @@ def get_group_lists(filename):
     return groups_of_students
 
 
-def test_get_group_lists(pp):
-    # get all students and subjects they do
+def run_tests():
+    pp = PrettyPrinter(indent=4)
+    # test getting group lists from file
     student_details = get_group_lists(STUDENT_FILE)
     pp.pprint(student_details)
 
-
-def run_tests():
-    pp = PrettyPrinter(indent=4)
-    # test_get_group_lists(pp)
-    # slack = Slacker(SLACK_AUTH_TOKEN)
-    # slack_groups = get_slack_groups(slack)
-    # pp.pprint(slack_groups)
+    # test getting Slack groups
+    client = SlackClient(SLACK_AUTH_TOKEN)
+    slack_groups = get_slack_groups(client)
+    pp.pprint(slack_groups)
 
 
 # run_tests()

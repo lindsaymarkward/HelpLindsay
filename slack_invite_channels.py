@@ -6,7 +6,7 @@ import xlrd
 from slackclient import SlackClient
 
 from private import SLACK_AUTH_TOKEN
-from slackFunctions import get_slack_channels_members, get_slack_users, PP, get_slack_channels
+from slack_functions import get_slack_channels_members, get_slack_users, PP, get_slack_channels
 
 DESIGN_THINKING_SUBJECTS = ["CP1403", "CP2408", "CP3405"]
 SUBSTITUTIONS_FILE = 'data/subject_substitutions.txt'

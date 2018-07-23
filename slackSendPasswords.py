@@ -2,23 +2,25 @@
 Program to send passwords (could be any data) to users in Slack
 input files: logins.txt like "username email"; passwords.txt like "username password"
 """
-from slacker import Slacker
+from slackclient import SlackClient
 from private import SLACK_AUTH_TOKEN
 from pprint import PrettyPrinter
 __author__ = 'Lindsay Ward'
 
+# TODO: This hasn't been updated for conversations API, but hasn't been used for a long time
+
 
 def main():
     pp = PrettyPrinter(indent=4)
-    slack = Slacker(SLACK_AUTH_TOKEN)
+    client = SlackClient(SLACK_AUTH_TOKEN)
     emails_logins = create_login_dictionary()
     logins_passwords = create_password_dictionary()
 
     # get a list of all member ids
-    response = slack.channels.info(slack.channels.get_channel_id('cp3402'))
+    response = client.channels.info(client.channels.get_channel_id('cp3402'))
     members = response.body['channel']['members']
     # get relevant details for just those members
-    users = get_member_details(slack, members)
+    users = get_member_details(client, members)
     # pp.pprint(users)
     contacted = []
     for user_id, email in users.items():
@@ -28,7 +30,7 @@ def main():
             message = "Your MySQL username and database on the ditwebtsv.jcu.edu.au server is {} and your password is {}".format(login, logins_passwords[login])
             # print(message)
             # Send Slack message
-            slack.chat.post_message(user_id, message, as_user=True)
+            client.chat.post_message(user_id, message, as_user=True)
             contacted.append((email, login, user_id))
         except KeyError:
             print("Skipping", email)
