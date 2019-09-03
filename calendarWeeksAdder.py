@@ -31,8 +31,7 @@ def create_on_campus_calendar():
         week1text = input(study_period + " Week 1 Date (dd/mm/yy): ")
         week1date = datetime.strptime(week1text, "%d/%m/%y").date()
         lecture_recess_text = input("Lecture Recess Date (dd/mm/yy): ")
-        lecture_recess_date = datetime.strptime(lecture_recess_text,
-                                                "%d/%m/%y").date()
+        lecture_recess_date = datetime.strptime(lecture_recess_text, "%d/%m/%y").date()
 
         # add O Week event (1 week before Week 1)
         event = Event()
@@ -120,5 +119,5 @@ def create_off_campus_calendar(weeks_in_study_period=10):
     calendar_file.close()
 
 
-# create_on_campus_calendar()
-create_off_campus_calendar()
+create_on_campus_calendar()
+# create_off_campus_calendar()

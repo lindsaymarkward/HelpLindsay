@@ -34,7 +34,8 @@ def get_file_data(filename=FILENAME):
     for i in range(1, sheet.nrows):
         row_values = sheet.row_values(i)
         date, time = row_values[EXCEL_FIELD_DATETIME].split()
-        date = date.replace('.', '-')  # format date for pvoutput.org
+        # format date for pvoutput.org
+        date = date.replace('.', '-')
         time = time[:-3]  # strip seconds
         row = [date, row_values[EXCEL_FIELD_ENERGY],
                row_values[EXCEL_FIELD_POWERNOW], time]

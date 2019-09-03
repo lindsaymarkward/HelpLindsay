@@ -11,26 +11,30 @@ from pprint import PrettyPrinter
 from slackclient import SlackClient
 
 from private import SLACK_AUTH_TOKEN, STAFF_TO_ADD
-from slack_functions import get_slack_groups, get_slack_users
+from slack_functions import get_slack_groups_members, get_slack_users
 
 __author__ = 'Lindsay Ward'
 
 STUDENT_FILE = "data/cp3402groups.csv"
+# STUDENT_FILE = "data/externals.csv"
+
+# Configuration: set whether or not to create groups if they're not present
+WILL_CREATE_GROUPS = True
 
 
 def main():
     client = SlackClient(SLACK_AUTH_TOKEN)
-    # pp = PrettyPrinter(indent=4)
+    pp = PrettyPrinter(indent=4)
 
     # get all students and their groups
     groups_students = get_group_lists(STUDENT_FILE)
-    # pp.pprint(groups_students)
+    pp.pprint(groups_students)
 
     # get all users from Slack
     slack_user_details = get_slack_users(client)
 
     # get all groups like {'name': (group ID, [member IDs])}
-    group_details = get_slack_groups(client)
+    group_details = get_slack_groups_members(client)
     # pp.pprint(group_details)
 
     missing_students = []
@@ -42,16 +46,21 @@ def main():
         try:
             group_id = group_details[group_name][0]
         except KeyError:
-            print("No {} group. Adding it now.".format(group_name))
-            response = client.api_call("groups.create", name=group_name)
-            try:
-                # add new group details to current groups dictionary in same format (id, [members])
-                group_id = response['group']['id']
-                group_details[group_name] = (group_id, [])
-            except Exception as error:
-                print(error)
-                print("Creating group {} failed. Exiting.".format(group_name))
-                return False
+            print("No {} group.".format(group_name))
+            if WILL_CREATE_GROUPS:
+                print("Adding it now.")
+                try:
+                    response = client.api_call("groups.create", name=group_name)
+                    # add new group details to current groups dictionary in same format (id, [members])
+                    group_id = response['group']['id']
+                    group_details[group_name] = (group_id, [])
+                except Exception as error:
+                    print(error)
+                    print("Creating group {} failed. Exiting.".format(group_name))
+                    return False
+            else:
+                # No group, not created, so can't add students
+                continue
 
         # add students to group
         for email in students:
@@ -137,7 +146,7 @@ def run_tests():
 
     # test getting Slack groups
     client = SlackClient(SLACK_AUTH_TOKEN)
-    slack_groups = get_slack_groups(client)
+    slack_groups = get_slack_groups_members(client)
     pp.pprint(slack_groups)
 
 

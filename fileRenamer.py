@@ -9,8 +9,9 @@ import os
 
 # Remove start (from LearnJCU)
 LENGTH_OF_TEXT_TO_REMOVE = 28
-START_TEXT = "Assessment Item 4_"
-DIRECTORY = "/Users/sci-lmw1/Downloads/DT"
+START_TEXT = "Townsville "
+DIRECTORY = "/Users/sci-lmw1/Downloads/DT2Assignments"
+# DIRECTORY = "/Users/sci-lmw1/Downloads/DT"
 
 os.chdir(DIRECTORY)
 for filename in os.listdir('.'):

@@ -1,12 +1,12 @@
 """
 Script to invite all students in class list file to the Slack channels for each subject they do
-Takes unedited XLS file from JCU StaffOnline (subject "CP%"), download the file
+Takes unedited XLS file from JCU StaffOnline (subject "CP%", study period "SP1 or 2"), download the file
 """
 import xlrd
 from slackclient import SlackClient
 
 from private import SLACK_AUTH_TOKEN
-from slack_functions import get_slack_channels_members, get_slack_users, PP, get_slack_channels
+from slack_functions import get_slack_channels_members, get_slack_users, PP, get_slack_channels, remove_students
 
 DESIGN_THINKING_SUBJECTS = ["CP1403", "CP2408", "CP3405"]
 SUBSTITUTIONS_FILE = 'data/subject_substitutions.txt'
@@ -25,23 +25,32 @@ REMOVE_OLD_STUDENTS = False
 
 
 def main():
+    if REMOVE_OLD_STUDENTS:
+        input("Are you sure you want to remove students?!")
+
     # make Slack API connection
-    sc = SlackClient(SLACK_AUTH_TOKEN)
+    client = SlackClient(SLACK_AUTH_TOKEN)
 
     # get all students and subjects they do
+    print("Getting student data from file")
     student_details, all_subjects = get_student_data(STUDENT_FILE)
+    # PP.pprint(student_details)
 
     # get users from Slack like {email: (id, username, real name)}
-    slack_user_details = get_slack_users(sc)
+    print("Getting current Slack user data from workspace")
+    slack_user_details = get_slack_users(client)
+    # PP.pprint(slack_user_details)
+    print("Got {} users".format(len(slack_user_details)))
 
     # get channels like {channel name: (id, [members])}
-    channel_details = get_slack_channels_members(sc)
+    print("Getting Slack channel member details")
+    channel_details = get_slack_channels_members(client)
     # PP.pprint(channel_details)
 
     # optionally, clear out non-enrolled students
     if REMOVE_OLD_STUDENTS:
         print("Removing all students from subject channels")
-        remove_students(sc, channel_details, slack_user_details, STAFF_FILE)
+        remove_students(client, channel_details, slack_user_details, STAFF_FILE)
 
     substitutions = create_substitutions()
     missing_students = set()
@@ -66,7 +75,7 @@ def main():
                     print("Inviting {} to {}".format(email, channel_name))
                     invited_count += 1
                     try:
-                        sc.api_call("conversations.invite", channel=channel_id, users=[slack_id])
+                        client.api_call("conversations.invite", channel=channel_id, users=[slack_id])
                     except Exception as error:
                         print("ERROR inviting ({})\n".format(error))
                         missing_channels.add(channel_name)
@@ -116,9 +125,8 @@ def get_student_data(filename=STUDENT_FILE):
     """
     Read Excel (XLSX) file exported from JCU StaffOnline and get all students and their subjects
     :param filename: name of class list file to read
-    :return: dictionary of {email: set(subjects)}
-    (subjects includes "external" if their course is external)
-    and a set of all subjects
+    :return: dictionary of {email: set(subjects)} (subjects includes "external" if their course is external)
+             and a set of all subjects
     """
     class_workbook = xlrd.open_workbook(filename)
     class_sheet = class_workbook.sheet_by_index(0)
@@ -180,43 +188,6 @@ def test_get_students():
     # get all students and subjects they do
     student_details, all_subjects = get_student_data(STUDENT_FILE)
     PP.pprint(student_details)
-
-
-def remove_students(client, all_channel_details, slack_user_details,
-                    staff_filename=STAFF_FILE):
-    """Remove students (not staff) from subject channels not enrolled in."""
-    with open(staff_filename) as staff_file:
-        staff_emails = set([email.strip() for email in staff_file.readlines()])
-
-    # filter channel dictionary to just subject and selected channels
-    subject_channel_details = {name: value for name, value in
-                               all_channel_details.items() if
-                               name.startswith("cp")}
-    subject_channel_details["sprint"] = all_channel_details.get("sprint")
-    subject_channel_details["specialtopics"] = all_channel_details.get("specialtopics")
-    # PP.pprint(subject_channel_details)
-
-    staff_details = {email: details for email, details in
-                     slack_user_details.items() if email in staff_emails}
-    # PP.pprint(staff_details)
-
-    # get just the staff IDs into a set
-    staff_ids = set(values[0] for values in staff_details.values())
-
-    for channel_name, channel_details in subject_channel_details.items():
-        channel_id = channel_details[0]
-        channel_members = channel_details[1]
-        count = 0
-        # create set of students (all users minus the staff users)
-        students_to_remove = set(channel_members) - set(staff_ids)
-        # PP.pprint(students_to_remove)
-        for student_id in students_to_remove:
-            try:
-                client.api_call("conversations.kick", channel=channel_id, user=student_id)
-                count += 1
-            except Exception as error:
-                print("Error: {}".format(error))
-        print("Removed {} students from {}".format(count, channel_name))
 
 
 if __name__ == '__main__':
