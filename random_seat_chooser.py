@@ -29,14 +29,13 @@ for i in range(59, 82):
 for i in range(94, 116):
     seats.append("{}{}".format('T', i))
 
-seats.remove('A90')
-seats.remove('A91')
-seats.remove('A92')
-seats.remove('A93')
-seats.remove('A94')
+# These seats shouldn't win tickets
+seats.remove('G64')
+seats.remove('G65')
+seats.remove('G66')
 
 print(len(seats))
-print(seats)
+# print(seats)
 print()
 chosen_seats = sample(seats, 15)
 chosen_seats.sort()

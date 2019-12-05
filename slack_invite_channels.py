@@ -8,7 +8,7 @@ from slackclient import SlackClient
 from private import SLACK_AUTH_TOKEN
 from slack_functions import get_slack_channels_members, get_slack_users, PP, get_slack_channels, remove_students
 
-DESIGN_THINKING_SUBJECTS = ["CP1403", "CP2408", "CP3405"]
+DESIGN_THINKING_SUBJECTS = ["CP1403", "CP1803", "CP2408", "CP3405", "CP5641"]
 SUBSTITUTIONS_FILE = 'data/subject_substitutions.txt'
 STUDENT_FILE = 'data/Classlist_Results.xls'
 STAFF_FILE = 'data/slack_staff.txt'
@@ -57,7 +57,7 @@ def main():
     missing_channels = set()
     invited_count = 0
     # now we can find students not in their subject channels
-    # TODO: (one day) You can add multiple users as once, so determine first who to add
+    # TODO: (one day) You can add multiple users at once, so determine first who to add
     for email, subjects in student_details.items():
         try:
             slack_id = slack_user_details[email][0]
