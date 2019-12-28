@@ -9,7 +9,7 @@ import openpyxl
 # constants ordered/grouped by relevant spreadsheet
 DIRECTORY_DATA = 'data/subject_results'
 FILE_CLASS_LIST = 'class_list_from_sms.csv'
-COLUMN_ID = 13  # N
+COLUMN_CLASS_LIST_ID = 13  # N
 
 FILE_GRADE_CENTRE = 'learnjcu_grade_centre.xls'
 LAST_HEADING_BEFORE_ASSESSMENTS = 'Child Subject ID'
@@ -17,6 +17,7 @@ SHEET_STUDENT = 'StudentOne'
 SHEET_RESULTS = 'RawResults'
 FIRST_ROW_STUDENT_ONE = 3
 FIRST_ROW_RAW_DATA = 13
+COLUMN_GRADE_CENTRE_ID = 3
 
 FILE_RESULTS = 'blank_results.xlsx'
 
@@ -31,7 +32,10 @@ def main():
     # add_students_to_results(students)
     assessments, student_gradebook_rows = get_assessments()
     # assessments = [(7, 'Assignment 1 - Movies to Watch 1.0', 100.0), (8, 'Assignment 2 - Movies to Watch 2.0', 100.0), (9, 'Pracs', 30.0)]
-    copy_student_results(student_gradebook_rows, students)
+    student_results = get_student_results(student_gradebook_rows, students, assessments)
+    if len(students) != len(student_results):
+        print("ERROR! Student results don't match class list")
+    print(student_results)
 
 
 def get_students():
@@ -93,13 +97,25 @@ def get_assessments():
     return assessments, rows[1:]
 
 
-def copy_student_results(student_gradebook_rows, students):
+def get_student_results(student_gradebook_rows, students, assessments):
+    student_results = []
+    grade_centre_ids = [row[COLUMN_GRADE_CENTRE_ID] for row in student_gradebook_rows]
     for student in students:
-        student_id = student[COLUMN_ID]
-        student_name = student[COLUMN_ID + 1]
-        # print(student_id, student_name)
-        break
-    # print(student_gradebook_rows[0])
+        student_id = student[COLUMN_CLASS_LIST_ID]
+        student_name = student[COLUMN_CLASS_LIST_ID + 1]
+        student_result = [student_id, student_name]
+        index = grade_centre_ids.index(student_id)  # TODO: error check panic
+        # print(f"{student_name} is at row {index}")
+        for assessment in assessments:
+            # Replace non-scores like 'In Progress' or 'Needs Grading' with blanks
+            try:
+                score = str(float(student_gradebook_rows[index][assessment[0]]))
+            except ValueError:
+                score = ''
+            student_result.append(score)
+        # print(student_result)
+        student_results.append(student_result)
+    return student_results
 
 
 main()
