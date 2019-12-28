@@ -26,18 +26,16 @@ COLUMN_GRADE_CENTRE_FIRST_ASSESSMENT = 5
 def main():
     """Create subject results comprehensive spreadsheet."""
     print("Welcome")
-    students = get_students()
-    print(f"Got {len(students)} students from {FILE_CLASS_LIST}")
-    # print(students)
+    students_class_list = get_students()
+    print(f"Got {len(students_class_list)} students from {FILE_CLASS_LIST}")
 
-    # add_students_to_results(students)
+    # add_students_to_results(students_class_list)
     assessments, student_grade_centre_rows = get_assessments()
     # assessments = [(7, 'Assignment 1 - Movies to Watch 1.0', 100.0), (8, 'Assignment 2 - Movies to Watch 2.0', 100.0), (9, 'Pracs', 30.0)]
-    student_results = get_student_results(student_grade_centre_rows, students, assessments)
-    if len(students) != len(student_results):
+    student_results = get_student_results(student_grade_centre_rows, students_class_list, assessments)
+    if len(students_class_list) != len(student_results):
         print("ERROR: Student results don't match class list")
-    # print(student_results)
-    add_scores_to_results(student_results, assessments)
+    write_results(student_results, students_class_list, assessments)
 
 
 def get_students():
@@ -119,24 +117,37 @@ def get_student_results(student_grade_centre_rows, students, assessments):
             except ValueError:
                 score = None
             student_result.append(score)
-        # print(student_result)
         student_results.append(student_result)
     return student_results
 
 
-def add_scores_to_results(student_results, assessments):
-    """Add student scores to results data sheet."""
+def write_results(student_results, class_list, assessments):
+    """Write student details and scores to results spreadsheet."""
     workbook = openpyxl.load_workbook(filename=f"{DIRECTORY_DATA}/{FILE_RESULTS}")
+    # Add student scores to results data sheet
+    sheet = workbook[SHEET_STUDENT]
+    # Write all data from class list to results StudentOne sheet
+    for i, student in enumerate(class_list):
+        current_row = ROW_FIRST_STUDENT_ONE + i
+        for j, value in enumerate(student, 1):
+            sheet.cell(row=current_row, column=j, value=value)
+        # Write reference to grade
+        reference_row = ROW_FIRST_RAW_DATA + i
+        sheet.cell(row=current_row, column=16, value=f"={SHEET_RESULTS}!M{reference_row}")
 
-
+    # Add formulas to raw results sheet (just student ID and name)
     sheet = workbook[SHEET_RESULTS]
+    for i in range(len(class_list)):
+        current_row = ROW_FIRST_RAW_DATA + i
+        reference_row = ROW_FIRST_STUDENT_ONE + i
+        sheet.cell(row=current_row, column=2, value=f"={SHEET_STUDENT}!N{reference_row}")
+        sheet.cell(row=current_row, column=3, value=f"={SHEET_STUDENT}!O{reference_row}")
 
     # Add assessment headings
     # TODO ^
 
     # Add scores
     for i, current_student_results in enumerate(student_results):
-        print(i, current_student_results)
         current_row = ROW_FIRST_RAW_DATA + i
         for j, score in enumerate(current_student_results[2:]):
             if score is None:  # Don't write blanks
