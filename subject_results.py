@@ -8,6 +8,8 @@ import openpyxl
 
 # constants ordered/grouped by relevant spreadsheet
 DIRECTORY_DATA = 'data/subject_results'
+FILE_RESULTS = 'blank_results.xlsx'
+
 FILE_CLASS_LIST = 'class_list_from_sms.csv'
 COLUMN_CLASS_LIST_ID = 13  # N
 
@@ -15,11 +17,10 @@ FILE_GRADE_CENTRE = 'learnjcu_grade_centre.xls'
 LAST_HEADING_BEFORE_ASSESSMENTS = 'Child Subject ID'
 SHEET_STUDENT = 'StudentOne'
 SHEET_RESULTS = 'RawResults'
-FIRST_ROW_STUDENT_ONE = 3
-FIRST_ROW_RAW_DATA = 13
+ROW_FIRST_STUDENT_ONE = 3
+ROW_FIRST_RAW_DATA = 13
 COLUMN_GRADE_CENTRE_ID = 3
-
-FILE_RESULTS = 'blank_results.xlsx'
+COLUMN_GRADE_CENTRE_FIRST_ASSESSMENT = 5
 
 
 def main():
@@ -30,12 +31,13 @@ def main():
     # print(students)
 
     # add_students_to_results(students)
-    assessments, student_gradebook_rows = get_assessments()
+    assessments, student_grade_centre_rows = get_assessments()
     # assessments = [(7, 'Assignment 1 - Movies to Watch 1.0', 100.0), (8, 'Assignment 2 - Movies to Watch 2.0', 100.0), (9, 'Pracs', 30.0)]
-    student_results = get_student_results(student_gradebook_rows, students, assessments)
+    student_results = get_student_results(student_grade_centre_rows, students, assessments)
     if len(students) != len(student_results):
-        print("ERROR! Student results don't match class list")
-    print(student_results)
+        print("ERROR: Student results don't match class list")
+    # print(student_results)
+    add_scores_to_results(student_results, assessments)
 
 
 def get_students():
@@ -59,13 +61,13 @@ def add_students_to_results(students):
     # Write all data from class list to results StudentOne sheet
     for i, student in enumerate(students):
         for j, value in enumerate(student, 1):
-            sheet.cell(row=FIRST_ROW_STUDENT_ONE + i, column=j, value=value)
+            sheet.cell(row=ROW_FIRST_STUDENT_ONE + i, column=j, value=value)
 
     # Add formulas to raw results sheet (just student ID and name)
     sheet = workbook[SHEET_RESULTS]
     for i in range(len(students)):
-        current_row = FIRST_ROW_RAW_DATA + i
-        reference_row = FIRST_ROW_STUDENT_ONE + i
+        current_row = ROW_FIRST_RAW_DATA + i
+        reference_row = ROW_FIRST_STUDENT_ONE + i
         sheet.cell(row=current_row, column=2, value=f"={SHEET_STUDENT}!N{reference_row}")
         sheet.cell(row=current_row, column=3, value=f"={SHEET_STUDENT}!O{reference_row}")
     workbook.save(filename='test_output.xlsx')  # TODO: temporary. Save actual file.
@@ -97,25 +99,51 @@ def get_assessments():
     return assessments, rows[1:]
 
 
-def get_student_results(student_gradebook_rows, students, assessments):
+def get_student_results(student_grade_centre_rows, students, assessments):
     student_results = []
-    grade_centre_ids = [row[COLUMN_GRADE_CENTRE_ID] for row in student_gradebook_rows]
+    grade_centre_ids = [row[COLUMN_GRADE_CENTRE_ID] for row in student_grade_centre_rows]
     for student in students:
         student_id = student[COLUMN_CLASS_LIST_ID]
         student_name = student[COLUMN_CLASS_LIST_ID + 1]
         student_result = [student_id, student_name]
-        index = grade_centre_ids.index(student_id)  # TODO: error check panic
-        # print(f"{student_name} is at row {index}")
+        try:
+            index = grade_centre_ids.index(student_id)
+            # print(f"{student_name} is at row {index}")
+        except ValueError:
+            print(f"ERROR: Student: {student_name} ({student_id}) not in the LearnJCU Grade Centre sheet")
+            continue
         for assessment in assessments:
             # Replace non-scores like 'In Progress' or 'Needs Grading' with blanks
             try:
-                score = str(float(student_gradebook_rows[index][assessment[0]]))
+                score = float(student_grade_centre_rows[index][assessment[0]])
             except ValueError:
-                score = ''
+                score = None
             student_result.append(score)
         # print(student_result)
         student_results.append(student_result)
     return student_results
+
+
+def add_scores_to_results(student_results, assessments):
+    """Add student scores to results data sheet."""
+    workbook = openpyxl.load_workbook(filename=f"{DIRECTORY_DATA}/{FILE_RESULTS}")
+
+
+    sheet = workbook[SHEET_RESULTS]
+
+    # Add assessment headings
+    # TODO ^
+
+    # Add scores
+    for i, current_student_results in enumerate(student_results):
+        print(i, current_student_results)
+        current_row = ROW_FIRST_RAW_DATA + i
+        for j, score in enumerate(current_student_results[2:]):
+            if score is None:  # Don't write blanks
+                continue
+            current_column = COLUMN_GRADE_CENTRE_FIRST_ASSESSMENT + j
+            sheet.cell(row=current_row, column=current_column, value=score)
+    workbook.save(filename='test_output.xlsx')  # TODO: temporary. Save actual file.
 
 
 main()
