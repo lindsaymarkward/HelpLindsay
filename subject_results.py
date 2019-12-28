@@ -52,25 +52,6 @@ def get_students():
     return students
 
 
-def add_students_to_results(students):
-    """Add students to StudentOne data sheet."""
-    workbook = openpyxl.load_workbook(filename=f"{DIRECTORY_DATA}/{FILE_RESULTS}")
-    sheet = workbook[SHEET_STUDENT]
-    # Write all data from class list to results StudentOne sheet
-    for i, student in enumerate(students):
-        for j, value in enumerate(student, 1):
-            sheet.cell(row=ROW_FIRST_STUDENT_ONE + i, column=j, value=value)
-
-    # Add formulas to raw results sheet (just student ID and name)
-    sheet = workbook[SHEET_RESULTS]
-    for i in range(len(students)):
-        current_row = ROW_FIRST_RAW_DATA + i
-        reference_row = ROW_FIRST_STUDENT_ONE + i
-        sheet.cell(row=current_row, column=2, value=f"={SHEET_STUDENT}!N{reference_row}")
-        sheet.cell(row=current_row, column=3, value=f"={SHEET_STUDENT}!O{reference_row}")
-    workbook.save(filename='test_output.xlsx')  # TODO: temporary. Save actual file.
-
-
 def get_assessments():
     """Extract assessment details from LearnJCU Grade Centre sheet."""
     # File from LearnJCU is UTF-16 encoded tab-delimited CSV with XLS extension
@@ -92,7 +73,6 @@ def get_assessments():
         title = parts[0]
         score = float(parts[1].split()[0])
         assessments.append((first_assessment_index + i, title, score))
-    # print(assessments)
     # Return both processed assessments and rest of student data rows
     return assessments, rows[1:]
 
@@ -143,8 +123,12 @@ def write_results(student_results, class_list, assessments):
         sheet.cell(row=current_row, column=2, value=f"={SHEET_STUDENT}!N{reference_row}")
         sheet.cell(row=current_row, column=3, value=f"={SHEET_STUDENT}!O{reference_row}")
 
-    # Add assessment headings
-    # TODO ^
+    # Add assessment headings (E10-J12, 10=%, 11=Out Of, 12=Description)
+    # assessment looks like (7, 'Assignment 1 - Movies to Watch 1.0', 100.0)
+    for i, assessment in enumerate(assessments):
+        # Unsure if possible to get %. Could get staff to enter it in Grade Centre
+        sheet.cell(row=11, column=COLUMN_GRADE_CENTRE_FIRST_ASSESSMENT + i, value=assessment[2])
+        sheet.cell(row=12, column=COLUMN_GRADE_CENTRE_FIRST_ASSESSMENT + i, value=assessment[1])
 
     # Add scores
     for i, current_student_results in enumerate(student_results):
