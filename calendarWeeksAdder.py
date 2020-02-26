@@ -17,9 +17,7 @@ WEEKS_IN_STUDY_PERIOD = 13
 
 
 def create_on_campus_calendar():
-    """
-    Create a single calendar with one standard on-campus study period dates
-    """
+    """Create a single calendar with one standard on-campus study period dates."""
 
     # create "calendar" to add events to
     cal = Calendar()
@@ -28,9 +26,9 @@ def create_on_campus_calendar():
     for study_period in study_periods:
 
         # get required dates - week 1 and lecture recess; others are derived
-        week1text = input(study_period + " Week 1 Date (dd/mm/yy): ")
+        week1text = input(study_period + " Week 1 Monday Date (dd/mm/yy): ")
         week1date = datetime.strptime(week1text, "%d/%m/%y").date()
-        lecture_recess_text = input("Lecture Recess Date (dd/mm/yy): ")
+        lecture_recess_text = input("Lecture Recess Monday Date (dd/mm/yy): ")
         lecture_recess_date = datetime.strptime(lecture_recess_text, "%d/%m/%y").date()
 
         # add O Week event (1 week before Week 1)

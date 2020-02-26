@@ -2,11 +2,14 @@
 Create subject results comprehensive spreadsheet from:
 - Class list from Student Management System (SMS)
 - LearnJCU Ultra grade centre download/export
+- Blank subject results spreadsheet (template)
+
+TODO: Add error-checking for grade centre sheet (<= 5 assessment items)
 """
 import csv
 import openpyxl
 
-# constants ordered/grouped by relevant spreadsheet
+# Constants ordered/grouped by relevant spreadsheet
 DIRECTORY_DATA = 'data/subject_results'
 FILE_RESULTS = 'blank_results.xlsx'
 
@@ -142,4 +145,3 @@ def write_results(student_results, class_list, assessments):
 
 
 main()
-# get_assessments()

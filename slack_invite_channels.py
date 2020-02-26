@@ -35,12 +35,13 @@ def main():
     print("Getting student data from file")
     student_details, all_subjects = get_student_data(STUDENT_FILE)
     # PP.pprint(student_details)
+    print("Got {} students".format(len(student_details)))
 
     # get users from Slack like {email: (id, username, real name)}
     print("Getting current Slack user data from workspace")
     slack_user_details = get_slack_users(client)
     # PP.pprint(slack_user_details)
-    print("Got {} users".format(len(slack_user_details)))
+    print("Got {} Slack users".format(len(slack_user_details)))
 
     # get channels like {channel name: (id, [members])}
     print("Getting Slack channel member details")

@@ -84,7 +84,8 @@ def get_slack_channels_members(client):
             channel_details[name] = (slack_id, members)
             # print("{} members found in {}".format(len(members), name))
         except KeyError:
-            print("Problem with channel: {}".format(name))
+            print("Ignoring empty/archived channel: {}".format(name))
+            # PP.pprint(response)
     return channel_details
 
 
