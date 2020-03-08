@@ -26,7 +26,7 @@ REMOVE_OLD_STUDENTS = False
 
 def main():
     if REMOVE_OLD_STUDENTS:
-        input("Are you sure you want to remove students?!")
+        input("Are you sure you want to remove students?! Cancel program to stop now.")
 
     # make Slack API connection
     client = SlackClient(SLACK_AUTH_TOKEN)
