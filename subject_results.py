@@ -1,23 +1,28 @@
 """
-Create subject results comprehensive spreadsheet from:
+IT@JCU Subject Spreadshet Solution
+Lindsay Ward
+
+Create subject results comprehensive spreadsheets and grade CSVs from:
 - Class list from Student Management System (SMS)
 - LearnJCU Ultra grade centre download/export
 - Blank subject results spreadsheet (template)
 
-How To:
-Update user-customisable constants for desired directory
-Download LearnJCU Grade Centre file (xls extension but actually a CSV) to DIRECTORY_DATA folder
-Edit grade centre spreadsheet so that:
-- only desired assessments are present, in desired order
-- replace number/id after pipe | with assessment weighting (e.g. Assignment 1 [Total Pts: 100 Score] |20)
-Put all related student class list CSV files in DIRECTORY_DATA
-Run
-Output files will go into 'output' folder,
-Names will match class list CSV file names + "Results" - csv & xlsx
-Edit these to confirm all is OK
-NO Guarantees are given with this program :)
-
-TODO: Add error-checking for grade centre sheet (<= 5 assessment items)
+How To Use:
+* Update user-customisable constants for desired directory and LearnJCU Grade Centre filename
+* Download LearnJCU Grade Centre file (xls extension but actually a CSV) to DIRECTORY_DATA folder
+  Edit grade centre spreadsheet:
+    - leave only desired assessments are present, in desired order, with desired names
+    - replace number/id after pipe | with assessment weighting (e.g. Assignment 1 [Total Pts: 100 Score] |20)
+* Put all related student class list CSV files in DIRECTORY_DATA
+  The program will process each of the CSV files using the one LearnJCU Grade Centre file
+* Run
+    Output files will go into 'output' folder,
+    Names will match class list CSV file names + "Results" - csv & xlsx
+* Edit these to confirm all is OK
+  If you need to update small things, just do so and re-run to produce new output files
+  The CSV output can also be ignored and you can
+  generate one from the xlsx file if you update the results spreadsheet manually
+NO guarantees are given with this program :)
 """
 import csv
 import openpyxl
@@ -30,13 +35,13 @@ DIRECTORY_DATA = 'data/subject_results'
 DIRECTORY_OUTPUT_NAME = 'output'
 FILE_RESULTS_BLANK = 'CP-2020-1-Results.xlsx'
 FILE_GRADE_CENTRE = 'learnjcu_grade_centre.xls'
-FILE_IN_CLASS_LIST = 'CP3402 Townsville SP1 2020.csv'
 
 # Internal constants that might change if spreadsheet structure changes
 SHEET_STUDENT = 'StudentOne'
 SHEET_RESULTS = 'RawResults'
 COLUMN_CLASS_LIST_ID = 13  # N
 LAST_HEADING_BEFORE_ASSESSMENTS = 'Child Subject ID'  # for the column number without using an absolute number
+LAST_HEADING_BEFORE_ASSESSMENTS_BACKUP = 'Availability'  # for grade centre exports from non-merged LearnJCU sites
 ROW_FIRST_STUDENT_ONE = 3
 ROW_FIRST_RAW_DATA = 13
 COLUMN_GRADE_CENTRE_ID = 3  # Numbered from 1 (csv)
@@ -47,38 +52,50 @@ COLUMN_RESULTS_FINAL_GRADE = 'O'  # O for U/S/X grades in 2020-1
 def main():
     """Create subject results comprehensive spreadsheet."""
     warnings.filterwarnings("ignore")
+    os.chdir(DIRECTORY_DATA)
 
     # create output folder
     try:
-        os.mkdir(f"{DIRECTORY_DATA}/{DIRECTORY_OUTPUT_NAME}")
+        os.mkdir(f"{DIRECTORY_OUTPUT_NAME}")
     except FileExistsError:
         pass
-    # create filenames
-    input_filename_base = FILE_IN_CLASS_LIST.split('.')[0]  # no extension
-    output_filename_base = input_filename_base + "-Results"
 
-    students_class_list = get_students()
-    print(f"Got {len(students_class_list)} students from {FILE_IN_CLASS_LIST}")
-
-    # add_students_to_results(students_class_list)
-    assessments, student_grade_centre_rows = get_assessments()
+    # get all relevant data from LearnJCU Grade Centre file (may be for multiple offerings)
+    try:
+        assessments, student_grade_centre_rows = get_assessments(FILE_GRADE_CENTRE)
+    except RuntimeError as error:
+        print(error)
+        return
     print(f"Got {len(assessments)} assessments from {FILE_GRADE_CENTRE}")
 
-    # assessments = [(7, 'Assignment 1', 100.0, 10), (8, 'Assignment 2', 100.0, 20)]
-    student_results = get_student_results(student_grade_centre_rows, students_class_list, assessments)
-    if len(students_class_list) != len(student_results):
-        print("ERROR: Student results don't match class list")
-        return  # TODO: raise exception
-    print(f"Got {len(student_results)} students' results from {FILE_GRADE_CENTRE}")
-    write_results(student_results, students_class_list, assessments, output_filename_base + ".xlsx")
-    write_csv(output_filename_base)
-    print(f"Results spreadsheets created: {DIRECTORY_DATA}/{DIRECTORY_OUTPUT_NAME}/{output_filename_base} .xlsx & .csv")
+    # get input filenames (each CSV is a different subject offering)
+    class_list_filenames = [filename for filename in os.listdir('.') if filename.endswith(".csv")]
+
+    for class_list_filename in class_list_filenames:
+        # create filenames
+        input_filename_base = class_list_filename.split('.')[0]  # no extension
+        output_filename_base = input_filename_base + "-Results"
+
+        students_class_list = get_students(class_list_filename)
+        print(f"Got {len(students_class_list)} students from {class_list_filename}")
+
+        # assessments = [(7, 'Assignment 1', 100.0, 10), (8, 'Assignment 2', 100.0, 20)]
+        student_results = get_student_results(student_grade_centre_rows, students_class_list, assessments)
+
+        if len(students_class_list) != len(student_results):
+            print("ERROR: Student results don't match class list")
+            print("Trying with current data")
+        print(f"Got {len(student_results)} students' results from {FILE_GRADE_CENTRE}")
+
+        write_results(student_results, students_class_list, assessments, output_filename_base + ".xlsx")
+        write_csv(output_filename_base)
+        print(f"Results spreadsheets created: {DIRECTORY_DATA}/{DIRECTORY_OUTPUT_NAME}/{output_filename_base} .xlsx & .csv")
 
 
-def get_students():
+def get_students(input_filename):
     """Get students as a list of tuples from the class list."""
     students = []  # list of rows/lists
-    input_file = open(f"{DIRECTORY_DATA}/{FILE_IN_CLASS_LIST}", 'r')
+    input_file = open(input_filename, 'r')
     input_file.readline()  # Ignore first header line
     input_file.readline()  # Ignore second header line
     reader = csv.reader(input_file)
@@ -89,16 +106,19 @@ def get_students():
     return students
 
 
-def get_assessments():
+def get_assessments(input_filename):
     """Extract assessment details from LearnJCU Grade Centre sheet."""
     # File from LearnJCU is UTF-16 encoded tab-delimited CSV with XLS extension
-    input_file = open(f"{DIRECTORY_DATA}/{FILE_GRADE_CENTRE}", 'r', encoding='utf-16')
+    input_file = open(input_filename, 'r', encoding='utf-16')
     rows = list(csv.reader(input_file, delimiter="\t"))
     input_file.close()
     headings = rows[0]
 
     # Assessments start after the column with heading LAST_HEADER_BEFORE_ASSESSMENTS
-    first_assessment_index = headings.index(LAST_HEADING_BEFORE_ASSESSMENTS) + 1
+    try:
+        first_assessment_index = headings.index(LAST_HEADING_BEFORE_ASSESSMENTS) + 1
+    except ValueError:
+        first_assessment_index = headings.index(LAST_HEADING_BEFORE_ASSESSMENTS_BACKUP) + 1
     assessment_headings = headings[first_assessment_index:]
     assessments = []
     # Assessment data looks like (last value set manually in spreadsheet):
@@ -114,8 +134,7 @@ def get_assessments():
             weight = int(sub_parts[-1].strip('|'))
             assessments.append((first_assessment_index + i, title, score, weight))
         except IndexError:
-            print(f"ERROR with format of {DIRECTORY_DATA}/{FILE_GRADE_CENTRE}")
-            return None  # TODO raise exception
+            raise RuntimeError(f"ERROR with format of {DIRECTORY_DATA}/{input_filename}")
     # Return both processed assessments and rest of student data rows
     return assessments, rows[1:]
 
@@ -147,7 +166,7 @@ def get_student_results(student_grade_centre_rows, students, assessments):
 
 def write_results(student_results, class_list, assessments, output_filename):
     """Write student details and scores to results spreadsheet."""
-    workbook = openpyxl.load_workbook(filename=f"{DIRECTORY_DATA}/{FILE_RESULTS_BLANK}")
+    workbook = openpyxl.load_workbook(filename=FILE_RESULTS_BLANK)
     # Add student scores to results data sheet
     sheet = workbook[SHEET_STUDENT]
     # Write all data from class list to results StudentOne sheet
@@ -184,7 +203,7 @@ def write_results(student_results, class_list, assessments, output_filename):
                 continue
             current_column = COLUMN_RESULTS_FIRST_ASSESSMENT + j
             sheet.cell(row=current_row, column=current_column, value=score)
-    workbook.save(filename=f"{DIRECTORY_DATA}/{DIRECTORY_OUTPUT_NAME}/{output_filename}")
+    workbook.save(filename=f"{DIRECTORY_OUTPUT_NAME}/{output_filename}")
 
 
 def write_csv(filename_base):
@@ -193,9 +212,9 @@ def write_csv(filename_base):
     output_filename = filename_base + ".csv"
     # openpyxl does not evaluate formulas, so use xlwings
     excel_app = xlwings.App(visible=False)
-    excel_book = excel_app.books.open(f"{DIRECTORY_DATA}/{DIRECTORY_OUTPUT_NAME}/{input_filename}")
+    excel_book = excel_app.books.open(f"{DIRECTORY_OUTPUT_NAME}/{input_filename}")
     sheet = excel_book.sheets[SHEET_STUDENT]
-    with open(f"{DIRECTORY_DATA}/{DIRECTORY_OUTPUT_NAME}/{output_filename}", 'w', newline="") as f:
+    with open(f"{DIRECTORY_OUTPUT_NAME}/{output_filename}", 'w', newline="") as f:
         writer = csv.writer(f)
         for row in sheet.range('A1').current_region.value:
             writer.writerow(row)
