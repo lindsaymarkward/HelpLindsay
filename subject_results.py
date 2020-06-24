@@ -9,6 +9,8 @@ Create subject results comprehensive spreadsheets and grade CSVs from:
 
 How To Use:
 * Update user-customisable constants for desired directory and LearnJCU Grade Centre filename
+  Creating the CSVs from the final grades (using xlwings) is by far the slowest
+  set WILL_CREATE_CSV to False to skip this step (and do it yourself in Excel)
 * Download LearnJCU Grade Centre file (xls extension but actually a CSV) to DIRECTORY_DATA folder
   Edit grade centre spreadsheet:
     - leave only desired assessments are present, in desired order, with desired names
@@ -30,9 +32,10 @@ import csv
 import os
 import warnings
 import openpyxl
+import openpyxl.utils
 import xlwings
 
-# User-defined constants
+# User-defined constants for preferences
 DIRECTORY_DATA = 'data/subject_results'
 DIRECTORY_OUTPUT_NAME = 'output'
 FILE_RESULTS_BLANK = 'Blank-Results.xlsx'
@@ -40,9 +43,10 @@ FILE_GRADE_CENTRE = 'learnjcu_grade_centre.xls'
 WILL_CREATE_CSV = True  # Set this to True/False if you want/don't grade CSVs made
 
 # Internal constants that might change if spreadsheet structure changes
+# Some row and column values are magic numbers; could be extracted as constants in future
 SHEET_STUDENT = 'StudentOne'
 SHEET_RESULTS = 'RawResults'
-COLUMN_CLASS_LIST_ID = 13  # N
+COLUMN_CLASS_LIST_STUDENT_ID = 13  # N
 LAST_HEADING_BEFORE_ASSESSMENTS = 'Child Subject ID'  # for the column number without using an absolute number
 LAST_HEADING_BEFORE_ASSESSMENTS_BACKUP = 'Availability'  # for grade centre exports from non-merged LearnJCU sites
 ROW_FIRST_STUDENT_ONE = 3
@@ -53,7 +57,6 @@ COLUMN_RESULTS_SUBJECT_CODE = 6
 COLUMN_RESULTS_YEAR = 10
 COLUMN_RESULTS_STUDY_PERIOD = 11
 COLUMN_RESULTS_FINAL_GRADE_LETTER = 'O'  # O for U/S/X grades in 2020-1
-# Some row and column values are magic numbers; could be extracted as constants in future
 
 
 def main():
@@ -95,9 +98,10 @@ def main():
         print(f"Got {len(student_results)} students' results from {FILE_GRADE_CENTRE}")
 
         write_results(student_results, students_class_list, assessments, output_filename_base + ".xlsx")
+        print(f"Results spreadsheet created: {DIRECTORY_DATA}/{DIRECTORY_OUTPUT_NAME}/{output_filename_base}.xlsx")
         if WILL_CREATE_CSV:
             write_csv(output_filename_base)
-        print(f"Results spreadsheet/s created: {DIRECTORY_DATA}/{DIRECTORY_OUTPUT_NAME}/{output_filename_base} .xlsx & .csv")
+            print(f"Grades CSV spreadsheet created: {DIRECTORY_DATA}/{DIRECTORY_OUTPUT_NAME}/{output_filename_base}.csv")
 
 
 def get_students(input_filename):
@@ -152,8 +156,8 @@ def get_student_results(student_grade_centre_rows, students, assessments):
     student_results = []
     grade_centre_ids = [row[COLUMN_GRADE_CENTRE_ID] for row in student_grade_centre_rows]
     for student in students:
-        student_id = student[COLUMN_CLASS_LIST_ID]
-        student_name = student[COLUMN_CLASS_LIST_ID + 1]
+        student_id = student[COLUMN_CLASS_LIST_STUDENT_ID]
+        student_name = student[COLUMN_CLASS_LIST_STUDENT_ID + 1]
         student_result = [student_id, student_name]
         try:
             index = grade_centre_ids.index(student_id)
@@ -183,11 +187,15 @@ def write_results(student_results, class_list, assessments, output_filename):
         current_row = ROW_FIRST_STUDENT_ONE + i
         for j, value in enumerate(student, 1):
             sheet.cell(row=current_row, column=j, value=value)
-        # Write reference to grade
-        reference_row = ROW_FIRST_RAW_DATA + i
-        sheet.cell(row=current_row, column=16, value=f"={SHEET_RESULTS}!{COLUMN_RESULTS_FINAL_GRADE_LETTER}{reference_row}")
+        # Write reference to grade using INDEX-MATCH so sorting results doesn't break formulas
+        reference_row = ROW_FIRST_STUDENT_ONE + i
+        column_number_grade = openpyxl.utils.cell.column_index_from_string(COLUMN_RESULTS_FINAL_GRADE_LETTER)
+        # + 1 since csv/pyopenxl have different starting indexes
+        column_letter_id = openpyxl.utils.cell.get_column_letter(COLUMN_CLASS_LIST_STUDENT_ID + 1)
+        formula = f"=INDEX({SHEET_RESULTS}!A${ROW_FIRST_RAW_DATA}:Q$320,MATCH({column_letter_id}{reference_row},{SHEET_RESULTS}!B${ROW_FIRST_RAW_DATA}:B$320,0),{column_number_grade})"
+        sheet.cell(row=current_row, column=COLUMN_CLASS_LIST_STUDENT_ID + 3, value=formula)
 
-    # Add formulas to raw results sheet (just student ID and name)
+    # Add formulas to raw results sheet to refer to student ID and name
     sheet = workbook[SHEET_RESULTS]
     for i in range(len(class_list)):
         current_row = ROW_FIRST_RAW_DATA + i
@@ -203,14 +211,18 @@ def write_results(student_results, class_list, assessments, output_filename):
     sheet.cell(row=4, column=3, value=study_period)
     sheet.cell(row=5, column=3, value=subject_code)
 
-    # Add assessment headings (E10-J12, 10=%, 11=Out Of, 12=Description)
+    # Add assessment headings
+    # Assume spreadsheet structure is based on 13=ROW_FIRST_RAW_DATA, 10=%, 11=Out Of, 12=Title
     # assessment looks like (7, 'Assignment 1 - Movies to Watch 1.0', 100.0, 20)
+    row_weight = ROW_FIRST_RAW_DATA - 3
+    row_out_of = ROW_FIRST_RAW_DATA - 2
+    row_title = ROW_FIRST_RAW_DATA - 1
     for i, assessment in enumerate(assessments):
         # Note: staff need to enter weight in Grade Centre file first
         weight_to_write = assessment[3] / 100  # Need 0-1 instead of 0-100 for % in spreadsheet
-        sheet.cell(row=10, column=COLUMN_RESULTS_FIRST_ASSESSMENT + i, value=weight_to_write)
-        sheet.cell(row=11, column=COLUMN_RESULTS_FIRST_ASSESSMENT + i, value=assessment[2])
-        sheet.cell(row=12, column=COLUMN_RESULTS_FIRST_ASSESSMENT + i, value=assessment[1])
+        sheet.cell(row=row_weight, column=COLUMN_RESULTS_FIRST_ASSESSMENT + i, value=weight_to_write)
+        sheet.cell(row=row_out_of, column=COLUMN_RESULTS_FIRST_ASSESSMENT + i, value=assessment[2])
+        sheet.cell(row=row_title, column=COLUMN_RESULTS_FIRST_ASSESSMENT + i, value=assessment[1])
 
     # Add scores
     for i, current_student_results in enumerate(student_results):
