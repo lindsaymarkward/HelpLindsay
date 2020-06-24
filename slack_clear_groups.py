@@ -38,7 +38,7 @@ def main():
                 client.api_call("groups.archive", channel=group_id)
         except Exception as error:
             print(repr(error))
-    # groups_file.close()
+    groups_file.close()
 
 
 main()
@@ -46,6 +46,7 @@ main()
 
 def rename():
     client = SlackClient(SLACK_AUTH_TOKEN)
-    rename_groups(client, "cp3402-2018", "cp3402-2019")
+    rename_groups(client, "cp3402-2019", "cp3402-2020")
+
 
 # rename()

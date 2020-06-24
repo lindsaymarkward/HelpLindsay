@@ -11,7 +11,7 @@ def main():
     # Get response text from Council website
     response = requests.get(URL)
     text = response.text
-    print(text)
+    # print(text)
     # Extract just the JSON-like string that contains the current data
     start_index = text.find(START_STRING) + len(START_STRING) + 4
     finished_index = text.find("}", start_index) + 1

@@ -5,7 +5,7 @@ https://slackapi.github.io/python-slackclient/conversations.html
 https://api.slack.com/methods
 """
 from slackclient import SlackClient
-from private import SLACK_AUTH_TOKEN, ID_LINDSAY, members_to_keep
+from private import SLACK_AUTH_TOKEN, members_to_keep
 from pprint import PrettyPrinter
 
 # from slack_invite_channels import STAFF_FILE
