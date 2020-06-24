@@ -4,23 +4,35 @@ Create subject results comprehensive spreadsheet from:
 - LearnJCU Ultra grade centre download/export
 - Blank subject results spreadsheet (template)
 
+How To:
+Update user-customisable constants for desired directory
+Download LearnJCU Grade Centre file (xls extension but actually a CSV) to DIRECTORY_DATA folder
+Edit grade centre spreadsheet so that:
+- only desired assessments are present, in desired order
+- replace number/id after pipe | with assessment weighting (e.g. Assignment 1 [Total Pts: 100 Score] |20)
+Put all related student class list CSV files in DIRECTORY_DATA
+Run
+Output files will go into 'output' folder,
+Names will match class list CSV file names + "Results" - csv & xlsx
+Edit these to confirm all is OK
+NO Guarantees are given with this program :)
+
 TODO: Add error-checking for grade centre sheet (<= 5 assessment items)
 """
 import csv
 import openpyxl
+import os
 import warnings
 import xlwings
 
-# Constants ordered/grouped by relevant spreadsheet
-
-DIRECTORY_DATA = 'data/subject_results/covid'
-FILE_RESULTS_BLANK = 'CP-2020-1-T-Results.xlsx'
+# User-defined constants
+DIRECTORY_DATA = 'data/subject_results'
+DIRECTORY_OUTPUT_NAME = 'output'
+FILE_RESULTS_BLANK = 'CP-2020-1-Results.xlsx'
 FILE_GRADE_CENTRE = 'learnjcu_grade_centre.xls'
-FILE_IN_CLASS_LIST = 'CP3402 Cairns SP1 2020.csv'
-# FILE_CLASS_LIST = 'class_list_from_sms.csv'
-FILE_OUTPUT = "results.xlsx"  # TODO - use IN_CLASS name + Results
+FILE_IN_CLASS_LIST = 'CP3402 Townsville SP1 2020.csv'
 
-
+# Internal constants that might change if spreadsheet structure changes
 SHEET_STUDENT = 'StudentOne'
 SHEET_RESULTS = 'RawResults'
 COLUMN_CLASS_LIST_ID = 13  # N
@@ -29,11 +41,22 @@ ROW_FIRST_STUDENT_ONE = 3
 ROW_FIRST_RAW_DATA = 13
 COLUMN_GRADE_CENTRE_ID = 3  # Numbered from 1 (csv)
 COLUMN_RESULTS_FIRST_ASSESSMENT = 5  # Numbered from 0 (openpyxl)
+COLUMN_RESULTS_FINAL_GRADE = 'O'  # O for U/S/X grades in 2020-1
 
 
 def main():
     """Create subject results comprehensive spreadsheet."""
     warnings.filterwarnings("ignore")
+
+    # create output folder
+    try:
+        os.mkdir(f"{DIRECTORY_DATA}/{DIRECTORY_OUTPUT_NAME}")
+    except FileExistsError:
+        pass
+    # create filenames
+    input_filename_base = FILE_IN_CLASS_LIST.split('.')[0]  # no extension
+    output_filename_base = input_filename_base + "-Results"
+
     students_class_list = get_students()
     print(f"Got {len(students_class_list)} students from {FILE_IN_CLASS_LIST}")
 
@@ -41,15 +64,15 @@ def main():
     assessments, student_grade_centre_rows = get_assessments()
     print(f"Got {len(assessments)} assessments from {FILE_GRADE_CENTRE}")
 
-    # assessments = [(7, 'Assignment 1 - Movies to Watch 1.0', 100.0), (8, 'Assignment 2 - Movies to Watch 2.0', 100.0), (9, 'Pracs', 30.0)]
+    # assessments = [(7, 'Assignment 1', 100.0, 10), (8, 'Assignment 2', 100.0, 20)]
     student_results = get_student_results(student_grade_centre_rows, students_class_list, assessments)
     if len(students_class_list) != len(student_results):
         print("ERROR: Student results don't match class list")
         return  # TODO: raise exception
     print(f"Got {len(student_results)} students' results from {FILE_GRADE_CENTRE}")
-    write_results(student_results, students_class_list, assessments)
-    print(f"Results spreadsheet created: {DIRECTORY_DATA}/{FILE_OUTPUT}")
-    write_csv()
+    write_results(student_results, students_class_list, assessments, output_filename_base + ".xlsx")
+    write_csv(output_filename_base)
+    print(f"Results spreadsheets created: {DIRECTORY_DATA}/{DIRECTORY_OUTPUT_NAME}/{output_filename_base} .xlsx & .csv")
 
 
 def get_students():
@@ -122,7 +145,7 @@ def get_student_results(student_grade_centre_rows, students, assessments):
     return student_results
 
 
-def write_results(student_results, class_list, assessments):
+def write_results(student_results, class_list, assessments, output_filename):
     """Write student details and scores to results spreadsheet."""
     workbook = openpyxl.load_workbook(filename=f"{DIRECTORY_DATA}/{FILE_RESULTS_BLANK}")
     # Add student scores to results data sheet
@@ -134,7 +157,7 @@ def write_results(student_results, class_list, assessments):
             sheet.cell(row=current_row, column=j, value=value)
         # Write reference to grade
         reference_row = ROW_FIRST_RAW_DATA + i
-        sheet.cell(row=current_row, column=16, value=f"={SHEET_RESULTS}!M{reference_row}")
+        sheet.cell(row=current_row, column=16, value=f"={SHEET_RESULTS}!{COLUMN_RESULTS_FINAL_GRADE}{reference_row}")
 
     # Add formulas to raw results sheet (just student ID and name)
     sheet = workbook[SHEET_RESULTS]
@@ -161,19 +184,18 @@ def write_results(student_results, class_list, assessments):
                 continue
             current_column = COLUMN_RESULTS_FIRST_ASSESSMENT + j
             sheet.cell(row=current_row, column=current_column, value=score)
-    workbook.save(filename=f"{DIRECTORY_DATA}/{FILE_OUTPUT}")
+    workbook.save(filename=f"{DIRECTORY_DATA}/{DIRECTORY_OUTPUT_NAME}/{output_filename}")
 
 
-def write_csv(filename=""):
+def write_csv(filename_base):
     """Write just CSV file needed for results submission."""
-    if not filename:
-        filename = FILE_OUTPUT.replace(FILE_OUTPUT.split('.')[-1], "csv")
-
-    # openpyxl does not evaluate the formula, so use xlwings
+    input_filename = filename_base + ".xlsx"
+    output_filename = filename_base + ".csv"
+    # openpyxl does not evaluate formulas, so use xlwings
     excel_app = xlwings.App(visible=False)
-    excel_book = excel_app.books.open(f"{DIRECTORY_DATA}/{FILE_OUTPUT}")
+    excel_book = excel_app.books.open(f"{DIRECTORY_DATA}/{DIRECTORY_OUTPUT_NAME}/{input_filename}")
     sheet = excel_book.sheets[SHEET_STUDENT]
-    with open(f"{DIRECTORY_DATA}/{filename}", 'w', newline="") as f:
+    with open(f"{DIRECTORY_DATA}/{DIRECTORY_OUTPUT_NAME}/{output_filename}", 'w', newline="") as f:
         writer = csv.writer(f)
         for row in sheet.range('A1').current_region.value:
             writer.writerow(row)
