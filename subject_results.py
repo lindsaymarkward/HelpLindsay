@@ -1,5 +1,5 @@
 """
-IT@JCU Subject Spreadshet Solution
+IT@JCU Subject Spreadsheet Solution
 Lindsay Ward
 
 Create subject results comprehensive spreadsheets and grade CSVs from:
@@ -15,26 +15,29 @@ How To Use:
     - replace number/id after pipe | with assessment weighting (e.g. Assignment 1 [Total Pts: 100 Score] |20)
 * Put all related student class list CSV files in DIRECTORY_DATA
   The program will process each of the CSV files using the one LearnJCU Grade Centre file
+  so do not have any other CSV files in this folder
 * Run
-    Output files will go into 'output' folder,
+    Output files will go into DIRECTORY_OUTPUT_NAME folder,
     Names will match class list CSV file names + "Results" - csv & xlsx
-* Edit these to confirm all is OK
+* Edit these to complete and confirm all is OK
   If you need to update small things, just do so and re-run to produce new output files
-  The CSV output can also be ignored and you can
-  generate one from the xlsx file if you update the results spreadsheet manually
+  No site (campus, mode) seems to be present in data, so add this and staff names to results sheet
+  The CSV output can also be ignored and you can just export one
+  from the xlsx file if you update the results spreadsheet manually
 NO guarantees are given with this program :)
 """
 import csv
-import openpyxl
 import os
 import warnings
+import openpyxl
 import xlwings
 
 # User-defined constants
 DIRECTORY_DATA = 'data/subject_results'
 DIRECTORY_OUTPUT_NAME = 'output'
-FILE_RESULTS_BLANK = 'CP-2020-1-Results.xlsx'
+FILE_RESULTS_BLANK = 'Blank-Results.xlsx'
 FILE_GRADE_CENTRE = 'learnjcu_grade_centre.xls'
+WILL_CREATE_CSV = True  # Set this to True/False if you want/don't grade CSVs made
 
 # Internal constants that might change if spreadsheet structure changes
 SHEET_STUDENT = 'StudentOne'
@@ -46,7 +49,11 @@ ROW_FIRST_STUDENT_ONE = 3
 ROW_FIRST_RAW_DATA = 13
 COLUMN_GRADE_CENTRE_ID = 3  # Numbered from 1 (csv)
 COLUMN_RESULTS_FIRST_ASSESSMENT = 5  # Numbered from 0 (openpyxl)
-COLUMN_RESULTS_FINAL_GRADE = 'O'  # O for U/S/X grades in 2020-1
+COLUMN_RESULTS_SUBJECT_CODE = 6
+COLUMN_RESULTS_YEAR = 10
+COLUMN_RESULTS_STUDY_PERIOD = 11
+COLUMN_RESULTS_FINAL_GRADE_LETTER = 'O'  # O for U/S/X grades in 2020-1
+# Some row and column values are magic numbers; could be extracted as constants in future
 
 
 def main():
@@ -88,8 +95,9 @@ def main():
         print(f"Got {len(student_results)} students' results from {FILE_GRADE_CENTRE}")
 
         write_results(student_results, students_class_list, assessments, output_filename_base + ".xlsx")
-        write_csv(output_filename_base)
-        print(f"Results spreadsheets created: {DIRECTORY_DATA}/{DIRECTORY_OUTPUT_NAME}/{output_filename_base} .xlsx & .csv")
+        if WILL_CREATE_CSV:
+            write_csv(output_filename_base)
+        print(f"Results spreadsheet/s created: {DIRECTORY_DATA}/{DIRECTORY_OUTPUT_NAME}/{output_filename_base} .xlsx & .csv")
 
 
 def get_students(input_filename):
@@ -121,7 +129,7 @@ def get_assessments(input_filename):
         first_assessment_index = headings.index(LAST_HEADING_BEFORE_ASSESSMENTS_BACKUP) + 1
     assessment_headings = headings[first_assessment_index:]
     assessments = []
-    # Assessment data looks like (last value set manually in spreadsheet):
+    # Assessment data looks like (last value needs to be set manually in spreadsheet):
     # heading = "Assignment 1 - Movies to Watch 1.0 [Total Pts: 100 Score] |20"
     # heading = "Pracs [Total Pts: up to 30 Score] |10"
     for i, heading in enumerate(assessment_headings):
@@ -140,6 +148,7 @@ def get_assessments(input_filename):
 
 
 def get_student_results(student_grade_centre_rows, students, assessments):
+    """Get relevant student results from raw data in form based on assessments."""
     student_results = []
     grade_centre_ids = [row[COLUMN_GRADE_CENTRE_ID] for row in student_grade_centre_rows]
     for student in students:
@@ -176,7 +185,7 @@ def write_results(student_results, class_list, assessments, output_filename):
             sheet.cell(row=current_row, column=j, value=value)
         # Write reference to grade
         reference_row = ROW_FIRST_RAW_DATA + i
-        sheet.cell(row=current_row, column=16, value=f"={SHEET_RESULTS}!{COLUMN_RESULTS_FINAL_GRADE}{reference_row}")
+        sheet.cell(row=current_row, column=16, value=f"={SHEET_RESULTS}!{COLUMN_RESULTS_FINAL_GRADE_LETTER}{reference_row}")
 
     # Add formulas to raw results sheet (just student ID and name)
     sheet = workbook[SHEET_RESULTS]
@@ -186,10 +195,18 @@ def write_results(student_results, class_list, assessments, output_filename):
         sheet.cell(row=current_row, column=2, value=f"={SHEET_STUDENT}!N{reference_row}")
         sheet.cell(row=current_row, column=3, value=f"={SHEET_STUDENT}!O{reference_row}")
 
+    # Get and write subject information
+    subject_code = class_list[0][COLUMN_RESULTS_SUBJECT_CODE]
+    year = class_list[0][COLUMN_RESULTS_YEAR]
+    study_period = class_list[0][COLUMN_RESULTS_STUDY_PERIOD]
+    sheet.cell(row=3, column=3, value=year)
+    sheet.cell(row=4, column=3, value=study_period)
+    sheet.cell(row=5, column=3, value=subject_code)
+
     # Add assessment headings (E10-J12, 10=%, 11=Out Of, 12=Description)
     # assessment looks like (7, 'Assignment 1 - Movies to Watch 1.0', 100.0, 20)
     for i, assessment in enumerate(assessments):
-        # Note: staff need to enter weight in Grade Centre
+        # Note: staff need to enter weight in Grade Centre file first
         weight_to_write = assessment[3] / 100  # Need 0-1 instead of 0-100 for % in spreadsheet
         sheet.cell(row=10, column=COLUMN_RESULTS_FIRST_ASSESSMENT + i, value=weight_to_write)
         sheet.cell(row=11, column=COLUMN_RESULTS_FIRST_ASSESSMENT + i, value=assessment[2])
@@ -214,8 +231,8 @@ def write_csv(filename_base):
     excel_app = xlwings.App(visible=False)
     excel_book = excel_app.books.open(f"{DIRECTORY_OUTPUT_NAME}/{input_filename}")
     sheet = excel_book.sheets[SHEET_STUDENT]
-    with open(f"{DIRECTORY_OUTPUT_NAME}/{output_filename}", 'w', newline="") as f:
-        writer = csv.writer(f)
+    with open(f"{DIRECTORY_OUTPUT_NAME}/{output_filename}", 'w', newline="") as output_file:
+        writer = csv.writer(output_file)
         for row in sheet.range('A1').current_region.value:
             writer.writerow(row)
     excel_book.save()
