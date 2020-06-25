@@ -44,19 +44,19 @@ WILL_CREATE_CSV = True  # Set this to True/False if you want/don't grade CSVs ma
 
 # Internal constants that might change if spreadsheet structure changes
 # Some row and column values are magic numbers; could be extracted as constants in future
-SHEET_STUDENT = 'StudentOne'
+SHEET_CLASS = 'StudentOne'
 SHEET_RESULTS = 'RawResults'
-COLUMN_CLASS_LIST_STUDENT_ID = 13  # N
 LAST_HEADING_BEFORE_ASSESSMENTS = 'Child Subject ID'  # for the column number without using an absolute number
 LAST_HEADING_BEFORE_ASSESSMENTS_BACKUP = 'Availability'  # for grade centre exports from non-merged LearnJCU sites
-ROW_FIRST_STUDENT_ONE = 3
-ROW_FIRST_RAW_DATA = 13
 COLUMN_GRADE_CENTRE_ID = 3  # Numbered from 1 (csv)
+ROW_CLASS_FIRST_STUDENT = 3
+COLUMN_CLASS_SUBJECT_CODE = 6
+COLUMN_CLASS_YEAR = 10
+COLUMN_CLASS_STUDY_PERIOD = 11
+COLUMN_CLASS_STUDENT_ID = 13  # N
 COLUMN_RESULTS_FIRST_ASSESSMENT = 5  # Numbered from 0 (openpyxl)
-COLUMN_RESULTS_SUBJECT_CODE = 6
-COLUMN_RESULTS_YEAR = 10
-COLUMN_RESULTS_STUDY_PERIOD = 11
 COLUMN_RESULTS_FINAL_GRADE_LETTER = 'O'  # O for U/S/X grades in 2020-1
+ROW_RESULTS_FIRST_STUDENT = 13
 
 
 def main():
@@ -156,8 +156,8 @@ def get_student_results(student_grade_centre_rows, students, assessments):
     student_results = []
     grade_centre_ids = [row[COLUMN_GRADE_CENTRE_ID] for row in student_grade_centre_rows]
     for student in students:
-        student_id = student[COLUMN_CLASS_LIST_STUDENT_ID]
-        student_name = student[COLUMN_CLASS_LIST_STUDENT_ID + 1]
+        student_id = student[COLUMN_CLASS_STUDENT_ID]
+        student_name = student[COLUMN_CLASS_STUDENT_ID + 1]
         student_result = [student_id, student_name]
         try:
             index = grade_centre_ids.index(student_id)
@@ -181,32 +181,32 @@ def write_results(student_results, class_list, assessments, output_filename):
     """Write student details and scores to results spreadsheet."""
     workbook = openpyxl.load_workbook(filename=FILE_RESULTS_BLANK)
     # Add student scores to results data sheet
-    sheet = workbook[SHEET_STUDENT]
+    sheet = workbook[SHEET_CLASS]
     # Write all data from class list to results StudentOne sheet
     for i, student in enumerate(class_list):
-        current_row = ROW_FIRST_STUDENT_ONE + i
+        current_row = ROW_CLASS_FIRST_STUDENT + i
         for j, value in enumerate(student, 1):
             sheet.cell(row=current_row, column=j, value=value)
         # Write reference to grade using INDEX-MATCH so sorting results doesn't break formulas
-        reference_row = ROW_FIRST_STUDENT_ONE + i
+        reference_row = ROW_CLASS_FIRST_STUDENT + i
         column_number_grade = openpyxl.utils.cell.column_index_from_string(COLUMN_RESULTS_FINAL_GRADE_LETTER)
         # + 1 since csv/pyopenxl have different starting indexes
-        column_letter_id = openpyxl.utils.cell.get_column_letter(COLUMN_CLASS_LIST_STUDENT_ID + 1)
-        formula = f"=INDEX({SHEET_RESULTS}!A${ROW_FIRST_RAW_DATA}:Q$320,MATCH({column_letter_id}{reference_row},{SHEET_RESULTS}!B${ROW_FIRST_RAW_DATA}:B$320,0),{column_number_grade})"
-        sheet.cell(row=current_row, column=COLUMN_CLASS_LIST_STUDENT_ID + 3, value=formula)
+        column_letter_id = openpyxl.utils.cell.get_column_letter(COLUMN_CLASS_STUDENT_ID + 1)
+        formula = f"=INDEX({SHEET_RESULTS}!A${ROW_RESULTS_FIRST_STUDENT}:Q$320,MATCH({column_letter_id}{reference_row},{SHEET_RESULTS}!B${ROW_RESULTS_FIRST_STUDENT}:B$320,0),{column_number_grade})"
+        sheet.cell(row=current_row, column=COLUMN_CLASS_STUDENT_ID + 3, value=formula)
 
     # Add formulas to raw results sheet to refer to student ID and name
     sheet = workbook[SHEET_RESULTS]
     for i in range(len(class_list)):
-        current_row = ROW_FIRST_RAW_DATA + i
-        reference_row = ROW_FIRST_STUDENT_ONE + i
-        sheet.cell(row=current_row, column=2, value=f"={SHEET_STUDENT}!N{reference_row}")
-        sheet.cell(row=current_row, column=3, value=f"={SHEET_STUDENT}!O{reference_row}")
+        current_row = ROW_RESULTS_FIRST_STUDENT + i
+        reference_row = ROW_CLASS_FIRST_STUDENT + i
+        sheet.cell(row=current_row, column=2, value=f"={SHEET_CLASS}!N{reference_row}")
+        sheet.cell(row=current_row, column=3, value=f"={SHEET_CLASS}!O{reference_row}")
 
     # Get and write subject information
-    subject_code = class_list[0][COLUMN_RESULTS_SUBJECT_CODE]
-    year = class_list[0][COLUMN_RESULTS_YEAR]
-    study_period = class_list[0][COLUMN_RESULTS_STUDY_PERIOD]
+    subject_code = class_list[0][COLUMN_CLASS_SUBJECT_CODE]
+    year = class_list[0][COLUMN_CLASS_YEAR]
+    study_period = class_list[0][COLUMN_CLASS_STUDY_PERIOD]
     sheet.cell(row=3, column=3, value=year)
     sheet.cell(row=4, column=3, value=study_period)
     sheet.cell(row=5, column=3, value=subject_code)
@@ -214,9 +214,9 @@ def write_results(student_results, class_list, assessments, output_filename):
     # Add assessment headings
     # Assume spreadsheet structure is based on 13=ROW_FIRST_RAW_DATA, 10=%, 11=Out Of, 12=Title
     # assessment looks like (7, 'Assignment 1 - Movies to Watch 1.0', 100.0, 20)
-    row_weight = ROW_FIRST_RAW_DATA - 3
-    row_out_of = ROW_FIRST_RAW_DATA - 2
-    row_title = ROW_FIRST_RAW_DATA - 1
+    row_weight = ROW_RESULTS_FIRST_STUDENT - 3
+    row_out_of = ROW_RESULTS_FIRST_STUDENT - 2
+    row_title = ROW_RESULTS_FIRST_STUDENT - 1
     for i, assessment in enumerate(assessments):
         # Note: staff need to enter weight in Grade Centre file first
         weight_to_write = assessment[3] / 100  # Need 0-1 instead of 0-100 for % in spreadsheet
@@ -226,7 +226,7 @@ def write_results(student_results, class_list, assessments, output_filename):
 
     # Add scores
     for i, current_student_results in enumerate(student_results):
-        current_row = ROW_FIRST_RAW_DATA + i
+        current_row = ROW_RESULTS_FIRST_STUDENT + i
         for j, score in enumerate(current_student_results[2:]):
             if score is None:  # Don't write blanks
                 continue
@@ -242,7 +242,7 @@ def write_csv(filename_base):
     # openpyxl does not evaluate formulas, so use xlwings
     excel_app = xlwings.App(visible=False)
     excel_book = excel_app.books.open(f"{DIRECTORY_OUTPUT_NAME}/{input_filename}")
-    sheet = excel_book.sheets[SHEET_STUDENT]
+    sheet = excel_book.sheets[SHEET_CLASS]
     with open(f"{DIRECTORY_OUTPUT_NAME}/{output_filename}", 'w', newline="") as output_file:
         writer = csv.writer(output_file)
         for row in sheet.range('A1').current_region.value:
