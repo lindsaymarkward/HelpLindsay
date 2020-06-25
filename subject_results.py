@@ -39,7 +39,7 @@ import openpyxl.utils
 import xlwings
 
 # User-defined constants for preferences
-WILL_CREATE_CSV = False  # Set this to True/False if you want/don't grade CSVs made
+WILL_CREATE_CSV = True  # Set this to True/False if you want/don't grade CSVs made
 DIRECTORY_DATA = 'data/subject_results'
 DIRECTORY_OUTPUT_NAME = 'output'
 FILE_RESULTS_BLANK = 'Blank-Results.xlsx'
@@ -51,14 +51,14 @@ SHEET_CLASS = 'StudentOne'
 SHEET_RESULTS = 'RawResults'
 LAST_HEADING_BEFORE_ASSESSMENTS = 'Child Subject ID'  # for the column number without using an absolute number
 LAST_HEADING_BEFORE_ASSESSMENTS_BACKUP = 'Availability'  # for grade centre exports from non-merged LearnJCU sites
-COLUMN_GRADE_CENTRE_ID = 3  # Numbered from 1 (csv) [Unsure about the first index]
+COLUMN_GRADE_CENTRE_ID = 3  # Numbered from 0 (csv/list)
 ROW_CLASS_FIRST_STUDENT = 3
 COLUMN_CLASS_SUBJECT_CODE = 6
 COLUMN_CLASS_YEAR = 10
 COLUMN_CLASS_STUDY_PERIOD = 11
 COLUMN_CLASS_STUDENT_ID = 13  # N
-COLUMN_RESULTS_FIRST_ASSESSMENT = 5  # Numbered from 0 (openpyxl)
-COLUMN_RESULTS_FINAL_GRADE_LETTER = 'O'  # O for U/S/X grades in 2020-1
+COLUMN_RESULTS_FIRST_ASSESSMENT = 5  # Numbered from 1 (openpyxl)
+COLUMN_RESULTS_FINAL_GRADE_LETTER = 'N'  # O for U/S/X grades in 2020-1, N for normal
 ROW_RESULTS_FIRST_STUDENT = 13
 
 
