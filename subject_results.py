@@ -27,6 +27,9 @@ How To Use:
   The CSV output can also be ignored and you can just export one
   from the xlsx file if you update the results spreadsheet manually
 NO guarantees are given with this program :)
+
+TODO: consider rewriting with pandas
+https://stackoverflow.com/questions/16503560/read-specific-columns-from-a-csv-file-with-csv-module
 """
 import csv
 import os
@@ -36,11 +39,11 @@ import openpyxl.utils
 import xlwings
 
 # User-defined constants for preferences
+WILL_CREATE_CSV = False  # Set this to True/False if you want/don't grade CSVs made
 DIRECTORY_DATA = 'data/subject_results'
 DIRECTORY_OUTPUT_NAME = 'output'
 FILE_RESULTS_BLANK = 'Blank-Results.xlsx'
 FILE_GRADE_CENTRE = 'learnjcu_grade_centre.xls'
-WILL_CREATE_CSV = True  # Set this to True/False if you want/don't grade CSVs made
 
 # Internal constants that might change if spreadsheet structure changes
 # Some row and column values are magic numbers; could be extracted as constants in future
@@ -48,7 +51,7 @@ SHEET_CLASS = 'StudentOne'
 SHEET_RESULTS = 'RawResults'
 LAST_HEADING_BEFORE_ASSESSMENTS = 'Child Subject ID'  # for the column number without using an absolute number
 LAST_HEADING_BEFORE_ASSESSMENTS_BACKUP = 'Availability'  # for grade centre exports from non-merged LearnJCU sites
-COLUMN_GRADE_CENTRE_ID = 3  # Numbered from 1 (csv)
+COLUMN_GRADE_CENTRE_ID = 3  # Numbered from 1 (csv) [Unsure about the first index]
 ROW_CLASS_FIRST_STUDENT = 3
 COLUMN_CLASS_SUBJECT_CODE = 6
 COLUMN_CLASS_YEAR = 10
@@ -121,9 +124,12 @@ def get_students(input_filename):
 def get_assessments(input_filename):
     """Extract assessment details from LearnJCU Grade Centre sheet."""
     # File from LearnJCU is UTF-16 encoded tab-delimited CSV with XLS extension
-    input_file = open(input_filename, 'r', encoding='utf-16')
-    rows = list(csv.reader(input_file, delimiter="\t"))
-    input_file.close()
+    try:
+        input_file = open(input_filename, 'r', encoding='utf-16')
+        rows = list(csv.reader(input_file, delimiter="\t"))
+        input_file.close()
+    except UnicodeError:
+        raise RuntimeError(f"ERROR: Incorrect format; create {FILE_GRADE_CENTRE} again from download without changing format (copy and paste values into downloaded file)")
     headings = rows[0]
 
     # Assessments start after the column with heading LAST_HEADER_BEFORE_ASSESSMENTS
@@ -161,12 +167,16 @@ def get_student_results(student_grade_centre_rows, students, assessments):
         student_result = [student_id, student_name]
         try:
             index = grade_centre_ids.index(student_id)
-            # print(f"{student_name} is at row {index}")
         except ValueError:
-            print(f"ERROR: Student: {student_name} ({student_id}) not in the LearnJCU Grade Centre sheet")
+            print(f"ERROR?: Student: {student_name} ({student_id}) not in the LearnJCU Grade Centre sheet")
+            # Need to store blank results so writing to spreadsheet works correctly
+            student_result += [None] * len(assessments)
+            student_results.append(student_result)
             continue
         for assessment in assessments:
-            # Handle things like "Reply to Post(81.60)" in LearnJCU with total column
+            # User needs to handle things like "Reply to Post(81.60)"
+            # Do this in LearnJCU with total column or clean up downloaded sheet
+
             # Replace non-scores like 'In Progress' or 'Needs Grading' with blanks
             try:
                 score = float(student_grade_centre_rows[index][assessment[0]])
