@@ -13,7 +13,7 @@ How To Use:
   set WILL_CREATE_CSV to False to skip this step (and do it yourself in Excel)
 * Download LearnJCU Grade Centre file (xls extension but actually a CSV) to DIRECTORY_DATA folder
   Edit grade centre spreadsheet:
-    - leave only desired assessments are present, in desired order, with desired names
+    - leave only desired assessments, in desired order, with desired names
     - replace number/id after pipe | with assessment weighting (e.g. Assignment 1 [Total Pts: 100 Score] |20)
 * Put all related student class list CSV files in DIRECTORY_DATA
   The program will process each of the CSV files using the one LearnJCU Grade Centre file
@@ -58,8 +58,9 @@ COLUMN_CLASS_YEAR = 10
 COLUMN_CLASS_STUDY_PERIOD = 11
 COLUMN_CLASS_STUDENT_ID = 13  # N
 COLUMN_RESULTS_FIRST_ASSESSMENT = 5  # Numbered from 1 (openpyxl)
-COLUMN_RESULTS_FINAL_GRADE_LETTER = 'N'  # O for U/S/X grades in 2020-1, N for normal
+COLUMN_RESULTS_FINAL_GRADE_LETTER = 'M'  # O for U/S/X grades in 2020-1, M for normal
 ROW_RESULTS_FIRST_STUDENT = 13
+TEXT_TO_REMOVE = "Reply to Post("
 
 
 def main():
@@ -67,7 +68,7 @@ def main():
     warnings.filterwarnings("ignore")
     os.chdir(DIRECTORY_DATA)
 
-    # create output folder
+    # create output folder if needed
     try:
         os.mkdir(f"{DIRECTORY_OUTPUT_NAME}")
     except FileExistsError:
@@ -82,7 +83,7 @@ def main():
     print(f"Got {len(assessments)} assessments from {FILE_GRADE_CENTRE}")
 
     # get input filenames (each CSV is a different subject offering)
-    class_list_filenames = [filename for filename in os.listdir('.') if filename.endswith(".csv")]
+    class_list_filenames = [filename for filename in os.listdir('.') if filename.lower().endswith(".csv")]
 
     for class_list_filename in class_list_filenames:
         # create filenames
@@ -174,13 +175,13 @@ def get_student_results(student_grade_centre_rows, students, assessments):
             student_results.append(student_result)
             continue
         for assessment in assessments:
-            # User needs to handle things like "Reply to Post(81.60)"
-            # Do this in LearnJCU with total column or clean up downloaded sheet
-
-            # Replace non-scores like 'In Progress' or 'Needs Grading' with blanks
             try:
-                score = float(student_grade_centre_rows[index][assessment[0]])
+                # Strip "Reply to Post(81.60)" (e.g. unposted final assessment item results)
+                cell_value = student_grade_centre_rows[index][assessment[0]]
+                cell_value = cell_value.strip(TEXT_TO_REMOVE).strip(")")
+                score = float(cell_value)
             except ValueError:
+                # Replace non-scores like 'In Progress' or 'Needs Grading' with blanks
                 score = None
             student_result.append(score)
         student_results.append(student_result)
@@ -234,14 +235,22 @@ def write_results(student_results, class_list, assessments, output_filename):
         sheet.cell(row=row_out_of, column=COLUMN_RESULTS_FIRST_ASSESSMENT + i, value=assessment[2])
         sheet.cell(row=row_title, column=COLUMN_RESULTS_FIRST_ASSESSMENT + i, value=assessment[1])
 
-    # Add scores
+    # Add assessment scores to RawResults sheet
     for i, current_student_results in enumerate(student_results):
         current_row = ROW_RESULTS_FIRST_STUDENT + i
+        # Write just row/student reference number (1, 2...)
+        sheet.cell(row=current_row, column=1, value=i + 1)
+
         for j, score in enumerate(current_student_results[2:]):
             if score is None:  # Don't write blanks
                 continue
             current_column = COLUMN_RESULTS_FIRST_ASSESSMENT + j
             sheet.cell(row=current_row, column=current_column, value=score)
+
+    # Write blank row so that sorting works in Excel
+    for column_number in range(1, 20):  # About 16 columns - clear them all
+        sheet.cell(row=current_row + 1, column=column_number, value="")
+
     workbook.save(filename=f"{DIRECTORY_OUTPUT_NAME}/{output_filename}")
 
 
