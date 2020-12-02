@@ -21,15 +21,16 @@ def day_2():
     number_of_valid_passwords = 0
     for line in file_in:
         parts = line.split()
-        # print(parts)
-        limits = parts[0].split('-')
-        minimum = int(limits[0])
-        maximum = int(limits[1])
+        position_parts = parts[0].split('-')
+        first_position = int(position_parts[0])
+        second_position = int(position_parts[1])
         character = parts[1][0]
         password = parts[2]
-        # print(minimum, maximum, character, password)
-        count = password.count(character)
-        if count >= minimum and count <= maximum:
+        # count = password.count(character)
+        is_first_position_ok = password[first_position - 1] == character
+        is_second_position_ok = password[second_position - 1] == character
+        count = is_first_position_ok + is_second_position_ok
+        if count == 1:
             number_of_valid_passwords += 1
     file_in.close()
     print(number_of_valid_passwords)
