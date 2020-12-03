@@ -5,7 +5,7 @@ https://adventofcode.com/2020/
 
 
 def day_1():
-    file_in = open('data/adventofcode/expense_report.txt')
+    file_in = open('expense_report.txt')
     values = [int(value) for value in file_in.readlines()]
     for value in values:
         for second_value in values:
@@ -17,7 +17,7 @@ def day_1():
 
 
 def day_2():
-    file_in = open('data/adventofcode/day2.txt')
+    file_in = open('day2.txt')
     number_of_valid_passwords = 0
     for line in file_in:
         parts = line.split()
@@ -36,4 +36,24 @@ def day_2():
     print(number_of_valid_passwords)
 
 
-day_2()
+def day_3():
+    slope = (3, 1)  # right, down
+    number_of_trees = 0
+    position = 0
+    file_in = open('day3.txt')
+    _ = file_in.readline()  # skip first line
+    for line in file_in:
+        elements = list(line.strip())
+        position += slope[0]
+        while True:
+            try:
+                if elements[position] == '#':
+                    number_of_trees += 1
+                break  # successful; no need to extend pattern
+            except IndexError:
+                elements += elements
+    file_in.close()
+    print(number_of_trees)
+
+
+day_3()
