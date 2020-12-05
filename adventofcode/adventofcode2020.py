@@ -160,7 +160,7 @@ def determine_seat_id(boarding_pass):
             low += gap // 2
         # print(character, low, high)
     row = low
-    print(f"Row: {row}")
+    # print(f"Row: {row}")
 
     low = 0
     high = 7
@@ -171,7 +171,7 @@ def determine_seat_id(boarding_pass):
         else:
             low += gap // 2
     column = low
-    print(f"Column: {column}")
+    # print(f"Column: {column}")
     seat_id = row * 8 + column
     return seat_id
 
@@ -182,12 +182,17 @@ def day_5():
     file_in = open('day5.txt')
     boarding_passes = [line.strip() for line in file_in.readlines()]
     file_in.close()
-    maximum = -1
+    seats = []
     for boarding_pass in boarding_passes:
         seat_id = determine_seat_id(boarding_pass)
-        if seat_id > maximum:
-            maximum = seat_id
-    print(maximum)
+        seats.append(seat_id)
+    seats.sort()
+
+    # print("\n".join((str(seat) for seat in seats)))
+    for i, seat in enumerate(seats):
+        if seats[i + 1] - seat > 1:
+            print(seat + 1)
+            break
 
 
 day_5()
