@@ -3,6 +3,11 @@ Advent of Code 2020
 https://adventofcode.com/2020/
 """
 import numpy
+import re
+
+REQUIRED_KEYS = ['byr', 'iyr', 'eyr', 'hgt', 'hcl', 'ecl', 'pid']
+VALID_EYE_COLOURS = ['amb', 'blu', 'brn', 'gry', 'grn', 'hzl', 'oth']
+NUMBER_REQUIRED = len(REQUIRED_KEYS)
 
 
 def day_1():
@@ -66,25 +71,82 @@ def day_3():
 
 
 def day_4():
-    required_keys = ['byr', 'iyr', 'eyr', 'hgt', 'hcl', 'ecl', 'pid']
-    number_required = len(required_keys)
     number_of_valid = 0
-    # strings = []
+    passports = []  # key, value pairs for each passport
     file_in = open("day4.txt")
     string = ""
     for line in file_in:
         if line == "\n":  # blank line is delimiter
-            # strings.append(string)
-            parts = string.split(' ')
-            keys = [part.split(':')[0] for part in parts]
-            count = sum((key in required_keys for key in keys))
-            if count == number_required:
-                number_of_valid += 1
+            parts = string.strip().split(' ')
+            pairs = [part.split(':') for part in parts]
+            passports.append(pairs)
             string = ""
         else:
             string += line.replace("\n", " ")
     file_in.close()
+
+    for passport in passports:
+        if is_passport_valid(passport):
+            number_of_valid += 1
+        print()
     print(number_of_valid)
+
+
+def is_passport_valid(passport):
+    keys = [pair[0] for pair in passport]
+    count = sum((key in REQUIRED_KEYS for key in keys))
+    if count != NUMBER_REQUIRED:
+        return False
+    for pair in passport:
+        is_valid = is_data_valid(pair[0], pair[1])
+        print(is_valid)
+        if not is_valid:
+            return False  # something is wrong with this data
+    print("Passport is valid")
+    return True
+
+
+def is_data_valid(key, value):
+    print(f"Validating {key}: {value}", end=" ")
+    # process each key, value
+    if key == 'byr':
+        if not is_number_valid(value, 1920, 2002):
+            return False
+    elif key == 'iyr':
+        if not is_number_valid(value, 2010, 2020):
+            return False
+    elif key == 'eyr':
+        if not is_number_valid(value, 2020, 2030):
+            return False
+    elif key == 'hgt':
+        height = value[:-2]
+        unit = value[-2:]
+        if unit == 'cm':
+            if not is_number_valid(height, 150, 193):
+                return False
+        elif unit == 'in':
+            if not is_number_valid(height, 59, 76):
+                return False
+        else:
+            return False
+    elif key == 'hcl':
+        if not re.search('^#(?:[0-9a-fA-F]{3}){1,2}$', value):
+            return False
+    elif key == 'ecl':
+        if value not in VALID_EYE_COLOURS:
+            return False
+    elif key == 'pid':
+        if not re.search('[0-9]{9}', value):
+            return False
+    return True
+
+
+def is_number_valid(string, minimum, maximum):
+    try:
+        number = int(string)
+        return minimum <= number <= maximum
+    except ValueError:
+        return False
 
 
 day_4()
