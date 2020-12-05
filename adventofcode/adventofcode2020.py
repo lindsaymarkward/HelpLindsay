@@ -65,4 +65,26 @@ def day_3():
     print(numpy.prod(results))
 
 
-day_3()
+def day_4():
+    required_keys = ['byr', 'iyr', 'eyr', 'hgt', 'hcl', 'ecl', 'pid']
+    number_required = len(required_keys)
+    number_of_valid = 0
+    # strings = []
+    file_in = open("day4.txt")
+    string = ""
+    for line in file_in:
+        if line == "\n":  # blank line is delimiter
+            # strings.append(string)
+            parts = string.split(' ')
+            keys = [part.split(':')[0] for part in parts]
+            count = sum((key in required_keys for key in keys))
+            if count == number_required:
+                number_of_valid += 1
+            string = ""
+        else:
+            string += line.replace("\n", " ")
+    file_in.close()
+    print(number_of_valid)
+
+
+day_4()
