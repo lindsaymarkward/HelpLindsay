@@ -149,4 +149,45 @@ def is_number_valid(string, minimum, maximum):
         return False
 
 
-day_4()
+def determine_seat_id(boarding_pass):
+    low = 0
+    high = 127
+    for character in boarding_pass[:7]:
+        gap = high - low + 1
+        if character == 'F':
+            high -= gap // 2
+        else:
+            low += gap // 2
+        # print(character, low, high)
+    row = low
+    print(f"Row: {row}")
+
+    low = 0
+    high = 7
+    for character in boarding_pass[-3:]:
+        gap = high - low + 1
+        if character == 'L':
+            high -= gap // 2
+        else:
+            low += gap // 2
+    column = low
+    print(f"Column: {column}")
+    seat_id = row * 8 + column
+    return seat_id
+
+
+def day_5():
+    # s = 'FBFBBFFRLR'
+    # print(determine_seat_id(s))
+    file_in = open('day5.txt')
+    boarding_passes = [line.strip() for line in file_in.readlines()]
+    file_in.close()
+    maximum = -1
+    for boarding_pass in boarding_passes:
+        seat_id = determine_seat_id(boarding_pass)
+        if seat_id > maximum:
+            maximum = seat_id
+    print(maximum)
+
+
+day_5()
