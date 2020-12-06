@@ -195,4 +195,26 @@ def day_5():
             break
 
 
-day_5()
+def day_6():
+    total = 0
+    file_in = open("day6.txt")
+    string = ""
+    for line in file_in:
+        if line == "\n":  # blank line is delimiter
+            values = set(string.strip())
+            count = len(values)
+            total += count
+            string = ""
+        else:
+            string += line.strip()
+    file_in.close()
+
+    # last line (not \n)
+    print(line)
+    values = set(string.strip())
+    count = len(values)
+    total += count
+    print(total)
+
+
+day_6()
