@@ -221,43 +221,38 @@ def day_6():
     print(total)
 
 
-def day_7():
-    rules = []
+def determine_number_of_bags(colour, rules):
+    # print("counting", colour)
+    contents = rules[colour]
+    if not contents:
+        # print(f"Base case {colour}")
+        return 1
     count = 0
+    for content in contents:
+        number = content[0]
+        colour = content[1]
+        # print(number, colour)
+        count += (number * determine_number_of_bags(colour, rules))
+    return count + 1
+
+
+def day_7():
+    rules = {}
     my_colour = 'shiny gold'
-    valid_colours = []
     file_in = open("day7.txt")
     for line in file_in:
         bags = line.strip('.\n').split(' bags contain ')
-        contents = [bag[1:].strip('bags').strip() for bag in bags[1].split(', ')]
-        rule = [bags[0], contents]
-        rules.append(rule)
+        try:
+            contents = [(int(bag[0]), bag[1:].strip('bags').strip()) for bag in bags[1].split(', ')]
+        except ValueError:
+            # "... contain no other bags
+            contents = []
+        rules[bags[0]] = contents
     file_in.close()
 
-    for rule in rules:
-        if my_colour in rule[1]:
-            valid_colours.append(rule[0])
-            # print(rule)
-            count += 1
+    count = determine_number_of_bags(my_colour, rules)
+    # -1 since we don't include my actual bag
+    print(count - 1)  # 8417 is too low; 11415 is too high; was 9569
 
-    is_contained = True
-    more_colours = valid_colours[:]
-    while is_contained:
-        is_contained = False
-        new_colours = []
-        for colour in more_colours:
-            for rule in rules:
-                if colour in rule[1]:
-                    new_colours.append(rule[0])
-                    count += 1
-                    is_contained = True
-        valid_colours += new_colours
-        more_colours = new_colours[:]
-
-    # print(valid_colours)
-    # print(more_colours)
-    # print(count)
-    # print(len(valid_colours))
-    print(len(set(valid_colours)))
 
 day_7()
