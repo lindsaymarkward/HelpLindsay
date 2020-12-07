@@ -198,22 +198,26 @@ def day_5():
 def day_6():
     total = 0
     file_in = open("day6.txt")
-    string = ""
+    group = []
     for line in file_in:
         if line == "\n":  # blank line is delimiter
-            values = set(string.strip())
-            count = len(values)
-            total += count
-            string = ""
+            # print(f"Counting: {group}")
+            if len(group) == 1:
+                total += len(group[0])
+            else:
+                for char in group[0]:
+                    count = 0
+                    for answers in group[1:]:
+                        if char in answers:
+                            count += 1
+                    if count == len(group[1:]):
+                        total += 1
+            group = []
         else:
-            string += line.strip()
+            values = list(line.strip())
+            group.append(values)
     file_in.close()
 
-    # last line (not \n)
-    print(line)
-    values = set(string.strip())
-    count = len(values)
-    total += count
     print(total)
 
 
