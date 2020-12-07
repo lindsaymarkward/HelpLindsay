@@ -221,4 +221,43 @@ def day_6():
     print(total)
 
 
-day_6()
+def day_7():
+    rules = []
+    count = 0
+    my_colour = 'shiny gold'
+    valid_colours = []
+    file_in = open("day7.txt")
+    for line in file_in:
+        bags = line.strip('.\n').split(' bags contain ')
+        contents = [bag[1:].strip('bags').strip() for bag in bags[1].split(', ')]
+        rule = [bags[0], contents]
+        rules.append(rule)
+    file_in.close()
+
+    for rule in rules:
+        if my_colour in rule[1]:
+            valid_colours.append(rule[0])
+            # print(rule)
+            count += 1
+
+    is_contained = True
+    more_colours = valid_colours[:]
+    while is_contained:
+        is_contained = False
+        new_colours = []
+        for colour in more_colours:
+            for rule in rules:
+                if colour in rule[1]:
+                    new_colours.append(rule[0])
+                    count += 1
+                    is_contained = True
+        valid_colours += new_colours
+        more_colours = new_colours[:]
+
+    # print(valid_colours)
+    # print(more_colours)
+    # print(count)
+    # print(len(valid_colours))
+    print(len(set(valid_colours)))
+
+day_7()
