@@ -2,6 +2,7 @@
 Advent of Code 2020
 https://adventofcode.com/2020/
 """
+import copy
 import numpy
 import re
 
@@ -256,38 +257,69 @@ def day_7():
 
 
 def day_8():
-    accumulator = 0
     instructions = []
-    used_instructions = []
     file_in = open('day8.txt')
-    # lines = file_in.readlines()
     for line in file_in:
         parts = line.split(' ')
         operation = parts[1][0]
         value = int(parts[1][1:])
-        instruction = (parts[0], operation, value)
+        instruction = [parts[0], operation, value]
         instructions.append(instruction)
     file_in.close()
-    i = 0
-    while True:  # not using for loop as need to jmp
-        instruction = instructions[i]
-        if i in used_instructions:
-            print(accumulator)
+    number_of_instructions = len(instructions)
+    is_solved = False
+    index_to_try = 0
+    while not is_solved:
+
+        if index_to_try == number_of_instructions:
+            print("Got to the end...")
             break
-        used_instructions.append(i)
-        if instruction[0] == 'acc':
-            if instruction[1] == '+':
-                accumulator += instruction[2]
-            else:
-                accumulator -= instruction[2]
-            i += 1
-        elif instruction[0] == 'jmp':
-            if instruction[1] == '+':
-                i += instruction[2]
-            else:
-                i -= instruction[2]
-        else:  # nop
-            i += 1
+        print(index_to_try, instructions[index_to_try])
+        # Interesting: slice or shallow copy mean changing the 2nd list does actually modify the first, even though they're different lists
+        # instructions_to_try = instructions[:]
+        # instructions_to_try = instructions.copy()
+        instructions_to_try = copy.deepcopy(instructions)
+
+        if instructions[index_to_try][0] == 'nop':
+            instructions_to_try[index_to_try][0] = 'jmp'
+        elif instructions[index_to_try][0] == 'jmp':
+            instructions_to_try[index_to_try][0] = 'nop'
+            # print(instructions == instructions_to_try, id(instructions), id(instructions_to_try))
+            # input()
+        else:
+            index_to_try += 1
+            continue
+
+        i = 0
+        accumulator = 0
+        used_instructions = []
+        while True:
+            instruction = instructions_to_try[i]
+            if i in used_instructions:
+                # We have an infinite loop; try next one
+                print("infinite")
+                break
+            used_instructions.append(i)
+            if instruction[0] == 'acc':
+                if instruction[1] == '+':
+                    accumulator += instruction[2]
+                else:
+                    accumulator -= instruction[2]
+                i += 1
+            elif instruction[0] == 'jmp':
+                if instruction[1] == '+':
+                    i += instruction[2]
+                else:
+                    i -= instruction[2]
+            else:  # nop
+                i += 1
+
+            if i == number_of_instructions:
+                print(f"Found it :) {index_to_try}")
+                print(accumulator)
+                is_solved = True
+                break
+        index_to_try += 1
 
 
 day_8()
