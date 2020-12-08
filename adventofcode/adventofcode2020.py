@@ -255,4 +255,39 @@ def day_7():
     print(count - 1)  # 8417 is too low; 11415 is too high; was 9569
 
 
-day_7()
+def day_8():
+    accumulator = 0
+    instructions = []
+    used_instructions = []
+    file_in = open('day8.txt')
+    # lines = file_in.readlines()
+    for line in file_in:
+        parts = line.split(' ')
+        operation = parts[1][0]
+        value = int(parts[1][1:])
+        instruction = (parts[0], operation, value)
+        instructions.append(instruction)
+    file_in.close()
+    i = 0
+    while True:  # not using for loop as need to jmp
+        instruction = instructions[i]
+        if i in used_instructions:
+            print(accumulator)
+            break
+        used_instructions.append(i)
+        if instruction[0] == 'acc':
+            if instruction[1] == '+':
+                accumulator += instruction[2]
+            else:
+                accumulator -= instruction[2]
+            i += 1
+        elif instruction[0] == 'jmp':
+            if instruction[1] == '+':
+                i += instruction[2]
+            else:
+                i -= instruction[2]
+        else:  # nop
+            i += 1
+
+
+day_8()
