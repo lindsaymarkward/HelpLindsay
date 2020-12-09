@@ -322,4 +322,28 @@ def day_8():
         index_to_try += 1
 
 
-day_8()
+def is_number_ok(number, pre_numbers):
+    for first_number in pre_numbers:
+        for second_number in pre_numbers:
+            if first_number == second_number:
+                continue
+            if first_number + second_number == number:
+                print(f"{first_number} + {second_number} = {number}")
+                return True
+    return False
+
+
+def day_9():
+    preamble_length = 25
+    file_in = open("day9.txt")
+    numbers = [int(line) for line in file_in]
+    file_in.close()
+    for i, number in enumerate(numbers[preamble_length:], preamble_length + 1):
+        # print(i, number)
+        print(numbers[i - preamble_length - 1:i - 1])
+        if not is_number_ok(number, numbers[i - preamble_length - 1:i - 1]):
+            print(f"Found it! {number}")
+            return
+
+
+day_9()
