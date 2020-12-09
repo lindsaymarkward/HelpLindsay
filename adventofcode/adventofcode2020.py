@@ -334,16 +334,29 @@ def is_number_ok(number, pre_numbers):
 
 
 def day_9():
-    preamble_length = 25
+    # my_number = 127  # from part 1
+    # file_in = open("day9test.txt")
+    my_number = 88311122  # from part 1
     file_in = open("day9.txt")
     numbers = [int(line) for line in file_in]
     file_in.close()
-    for i, number in enumerate(numbers[preamble_length:], preamble_length + 1):
-        # print(i, number)
-        print(numbers[i - preamble_length - 1:i - 1])
-        if not is_number_ok(number, numbers[i - preamble_length - 1:i - 1]):
-            print(f"Found it! {number}")
+    for i in range(len(numbers)):
+        if numbers[i] > my_number:
+            print("Done :(")
             return
+        j = i + 1
+        total = 0
+        while total < my_number:
+            j += 1
+            total = sum(numbers[i:j])
+            # print(i, j, total, numbers[i:j])
+        if total == my_number:
+            print("Found it :)")
+            print(i, j, numbers[i:j])
+            print(min(numbers[i:j]) + max(numbers[i:j]))
+            return
+        else:
+            continue
 
 
 day_9()
