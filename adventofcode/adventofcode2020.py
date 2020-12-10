@@ -359,4 +359,16 @@ def day_9():
             continue
 
 
-day_9()
+def day_10():
+    file_in = open("day10.txt")
+    numbers = [int(line) for line in file_in]
+    file_in.close()
+    numbers.sort()
+    differences = [numbers[i + 1] - numbers[i] for i in range(len(numbers) - 1)]
+    number_of_1s = differences.count(1) + 1
+    number_of_3s = differences.count(3) + 1
+    print(len(numbers), len(differences), number_of_1s, number_of_3s)
+    print(number_of_1s * number_of_3s)
+
+
+day_10()
