@@ -360,15 +360,55 @@ def day_9():
 
 
 def day_10():
-    file_in = open("day10.txt")
+    file_in = open("test.txt")
     numbers = [int(line) for line in file_in]
     file_in.close()
     numbers.sort()
     differences = [numbers[i + 1] - numbers[i] for i in range(len(numbers) - 1)]
     number_of_1s = differences.count(1) + 1
-    number_of_3s = differences.count(3) + 1
-    print(len(numbers), len(differences), number_of_1s, number_of_3s)
-    print(number_of_1s * number_of_3s)
+    print(len(numbers), number_of_1s)
 
 
-day_10()
+def day_11():
+    pass
+# copy.
+
+
+def move(direction, value, position):
+    if direction == "E":
+        position[0] += value
+    elif direction == "W":
+        position[0] -= value
+    elif direction == "N":
+        position[1] += value
+    else:
+        position[1] -= value
+
+
+def day_12():
+    directions = list("NESW")
+    file_in = open("day12.txt")
+    lines = [line.strip() for line in file_in]
+    file_in.close()
+    instructions = [(line[0], int(line[1:])) for line in lines]
+    position = [0, 0]  # E/W, N/S
+    direction = 'E'
+    for instruction in instructions:
+        if instruction[0] == "F":
+            move(direction, instruction[1], position)
+        elif instruction[0] in "NSEW":
+            move(instruction[0], instruction[1], position)
+        else:  # instruction[0] in "RL"
+            degrees = instruction[1]
+            number_of_turns = degrees // 90
+            index = directions.index(direction)
+            if instruction[0] == "R":
+                new_direction = directions[(index + number_of_turns) % 4]
+            else:
+                new_direction = directions[(index - number_of_turns) % 4]
+            direction = new_direction
+        print(instruction, position)
+    print(abs(position[0]) + abs(position[1]))
+
+
+day_12()
