@@ -411,4 +411,43 @@ def day_12():
     print(abs(position[0]) + abs(position[1]))
 
 
-day_12()
+def day_16():
+    file_in = open("day16.txt")
+    valid_numbers = []
+    lines = [line.strip() for line in file_in]
+    is_in_section = True
+    while is_in_section:
+        for line in lines:
+            if not line:  # blank line
+                is_in_section = False
+                break
+            parts = line[line.index(':'):].split()
+            for chunk in (parts[1], parts[3]):
+                # print(chunk)
+                start, finish = [int(bit) for bit in chunk.split('-')]
+                for i in range(start, finish + 1):
+                    valid_numbers.append(i)
+    valid_numbers = set(valid_numbers)
+    print(valid_numbers)
+    # line = file_in.readline().strip()
+    # while not line.startswith("nearby tickets"):
+    #     line = file_in.readline().strip()
+    invalid_numbers = []
+    index = lines.index("nearby tickets:")
+
+    for line in lines[index + 1:]:
+        numbers = [int(number) for number in line.split(',')]
+        for number in numbers:
+            if number not in valid_numbers:
+                invalid_numbers.append(number)
+    print(invalid_numbers)
+    total = sum(invalid_numbers)
+    print(total)
+    file_in.close()
+
+
+def day_22():
+    pass
+
+
+day_22()
