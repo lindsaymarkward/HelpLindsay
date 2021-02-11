@@ -5,7 +5,8 @@ import openpyxl
 from collections import OrderedDict
 
 YEAR = 2020
-START_STRING = "<h3>Subject Assessment</h3>"
+ASSESSMENT_START_STRING = "<h3>Subject Assessment</h3>"
+PRE_REQ_START_STRING = "Prerequisites:</td>"
 OUTPUT_HTML_FILENAME = "output/assessments.html"
 OUTPUT_EXCEL_FILENAME = "output/2021-IT-Assessment-Mapping.xlsx"
 HTML_TOP = """<!DOCTYPE html>
@@ -39,7 +40,7 @@ def main():
 
     file_out = open(OUTPUT_HTML_FILENAME, 'w')
     print(HTML_TOP, file=file_out)
-    subject_to_items = {}
+    # subject_to_items = {}
 
     print(f"<table>", file=file_out)
     for subject in subjects:
@@ -47,15 +48,17 @@ def main():
         print(f"<tr>", file=file_out)
         for i in range(2):
             year_to_get = YEAR + i
+            # print(f"Getting year {year_to_get}")
             print(f"<td><h2>{subject} - {year_to_get}</h2>", file=file_out)
             url = f"https://secure.jcu.edu.au/app/studyfinder/index.cfm?subject={subject}&year={year_to_get}&transform=subjectwebview.xslt"
             response = requests.get(url)
             text = response.text
+            prerequisite = get_prerequisite_block(text)
             assessment_block = get_assessment_block(text)
             print(assessment_block, file=file_out)
             items = extract_items(assessment_block)
-            subject_to_items[subject] = items
-            all_subject_details[i][subject] = items
+            # subject_to_items[subject] = items
+            all_subject_details[i][subject] = items, prerequisite
             print(f"</td>", file=file_out)
         print(f"</tr>", file=file_out)
     print(f"</table>", file=file_out)
@@ -71,10 +74,19 @@ def get_subjects():
     return subjects
 
 
+def get_prerequisite_block(text):
+    index_start = text.find(PRE_REQ_START_STRING)
+    if index_start == -1:  # TODO: Rewrite with walrus operator? :=
+        return "None"
+    index_end = text.find("</tr>", index_start)
+    section = text[index_start + len(PRE_REQ_START_STRING):index_end].strip().strip("<td>").strip("</td>")
+    return section
+
+
 def get_assessment_block(text):
-    index_heading = text.find(START_STRING)
+    index_heading = text.find(ASSESSMENT_START_STRING)
     index_end = text.find("</ul>", index_heading)
-    section = text[index_heading + len(START_STRING):index_end + 6]
+    section = text[index_heading + len(ASSESSMENT_START_STRING):index_end + 6]
     section = section.replace('. ', '')
     return section.strip()
 
@@ -85,15 +97,19 @@ def extract_items(block):
     parts = block.split('\n')
     raw_items = [part.strip().strip('<li>').strip('</li>') for part in parts if part.strip().startswith('<li>')]
     for raw_item in raw_items:
-        parts = raw_item.split(' - ')
-        assessment = parts[0].replace('&gt;', '>')
-        weight = parts[1].strip('(').strip('%)')
-        items.append((assessment, weight))
+        try:
+            parts = raw_item.split(' - ')
+            assessment = parts[0].replace('&gt;', '>')
+            weight = parts[1].strip('(').strip('%)')
+            items.append((assessment, weight))
+        except IndexError:
+            print(f"ERROR with {raw_item}")
     return items
 
 
 def write_spreadsheet(all_subject_details):
-    # all_subject_details contains 2 dictionaries
+    # all_subject_details contains 2 dictionaries, one for each year
+    # each value contains (a list of items, prerequisite string)
     workbook = openpyxl.load_workbook(filename=OUTPUT_EXCEL_FILENAME)
     sheet = workbook['Assessment-Mapping']
     row = 12  # first row for assessment items
@@ -101,6 +117,8 @@ def write_spreadsheet(all_subject_details):
     for i in range(2):  # for both years/dictionaries
         for subject, items in all_subject_details[i].items():
             # sheet.cell(row=row, column=column, value=subject)
+            prerequisite = items[1]
+            items = items[0]  # effectively rename as (assessment) items, without prerequisite
             item_row = row
             for item_number, item in enumerate(items):
                 name, weight = item
@@ -110,6 +128,8 @@ def write_spreadsheet(all_subject_details):
                     pass
                 sheet.cell(row=item_row + item_number, column=column, value=name)
                 sheet.cell(row=item_row + item_number, column=column + 3, value=weight)
+            sheet.cell(row=24, column=column, value=prerequisite)
+
             column += 4  # distance to next subject (4 pieces of data per assessment)
         row += 7  # move down to write next year's items
         column = 2
