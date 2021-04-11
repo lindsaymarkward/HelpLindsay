@@ -1,14 +1,13 @@
 """Display order of code review pull requests for CP1404 EXT."""
 
 USERNAMES_FILE = "data/github_usernames.txt"
-FIRST_PRAC = 5
+FIRST_PRAC = 5  # 5 at start of study period
 LAST_PRAC = 10
 
 
 def main():
-    title = "# CP1404 External Code Reviews"
-    print(title)
-    # print(len(title) * "-")
+    """Create code review orders as text for CP1404 pull requests."""
+    print("# CP1404 External Code Reviews")
     with open(USERNAMES_FILE) as in_file:
         usernames = [line.strip() for line in in_file.readlines()]
     max_length = max(len(username) for username in usernames)
@@ -17,7 +16,8 @@ def main():
         print("## Prac {}:".format(i + FIRST_PRAC))
         print("```")
         for position, username in enumerate(usernames):
-            print("{:{}} mentions:  {}".format(username, max_length, usernames[position - (i + 1)]))
+            other_username = usernames[position - (i + 1)]
+            print(f"{username:{max_length}} mentions:  {other_username}")
         print("```")
 
 
