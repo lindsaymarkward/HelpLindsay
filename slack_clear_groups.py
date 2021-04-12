@@ -3,50 +3,67 @@ Program to clear groups by kicking out all members (except specified ones)
 and clearing the purpose of the groups
 """
 from pprint import PrettyPrinter
-from slackclient import SlackClient
+from slack_sdk import WebClient
 from private import SLACK_AUTH_TOKEN, members_to_keep
-from slack_functions import get_slack_groups_members, kick_members, rename_groups
+from slack_functions import get_slack_groups_members, kick_members, rename_groups, delete_all_messages
 
-__author__ = 'Lindsay Ward'
 FILENAME = "data/slackGroups.txt"
 # customisation for whether or not to archive groups
 ARCHIVE_GROUP = False
 
 
 def main():
-    # pp = PrettyPrinter(indent=4)
-    client = SlackClient(SLACK_AUTH_TOKEN)
-    # TODO: might be more helpful if members_to_keep was specified as emails or Slack usernames instead of Slack IDs
+    """Remove users, clear purpose and delete messages from groups."""
+    pp = PrettyPrinter(indent=4)
+    client = WebClient(SLACK_AUTH_TOKEN)
+    # TODO: would be more helpful if members_to_keep was specified as emails or Slack usernames instead of Slack IDs
 
     group_details = get_slack_groups_members(client)
     # pp.pprint(group_details)
 
     # for testing a small number, not all in file:
-    # groups_to_clear = ["externalcp1404", "externalcp3402"]
-    # for group in groups_to_clear:
-    groups_file = open(FILENAME, "r")
-    for group in groups_file:
-        group = group.strip()
+    # groups_to_clear = ["cp3402-project-team01", "cp3402-project-team02"]
+
+    # for when all groups are in file
+    with open(FILENAME, "r") as groups_file:
+        groups_to_clear = [line.strip() for line in groups_file]
+
+    for group in groups_to_clear:
         try:
             print("For {}: {}".format(group, group_details[group]))
             group_id, members = group_details[group]
             kick_members(client, group_id, members, members_to_keep)
             print("Kicking from {}".format(group))
             # set "purpose" of group to blank
-            client.api_call("groups.setPurpose", channel=group_id, purpose="")
+            client.conversations_setPurpose(channel=group_id, purpose="")
+            delete_all_messages(client, group_id)
             if ARCHIVE_GROUP:
-                client.api_call("groups.archive", channel=group_id)
+                client.conversations_archive(channel=group_id)
         except Exception as error:
             print(repr(error))
-    groups_file.close()
 
 
-main()
+# main()
 
 
 def rename():
-    client = SlackClient(SLACK_AUTH_TOKEN)
-    rename_groups(client, "cp3402-2019", "cp3402-2020")
+    client = WebClient(SLACK_AUTH_TOKEN)
+    rename_groups(client, "cp3402-2020", "cp3402-2021")
 
 
 # rename()
+
+
+def delete_messages():
+    client = WebClient(SLACK_AUTH_TOKEN)
+    group_details = get_slack_groups_members(client)
+    with open("data/slackGroups.txt", "r") as groups_file:
+        groups_to_clear = [line.strip() for line in groups_file]
+
+    for group in groups_to_clear:
+        group_id = group_details[group][0]
+        print("Deleting messages from {}: {}".format(group, group_id))
+        delete_all_messages(client, group_id)
+
+
+# delete_messages()

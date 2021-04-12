@@ -72,8 +72,8 @@ def main():
                     print("Inviting {} to {}".format(email, channel_name))
                     invited_count += 1
                     try:
-                        response = client.api_call("channels.invite", channel=channel_id, user=slack_id)
-                        PP.pprint(response)
+                        response = client.api_call("conversations.invite", channel=channel_id, users=[slack_id])
+                        # PP.pprint(response)
                     except Exception as error:
                         print(repr(error))
                         print("ERROR inviting {} to {}\n".format(email, channel_name))

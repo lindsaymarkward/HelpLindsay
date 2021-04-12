@@ -21,11 +21,11 @@ EXCEL_FIELD_COURSE_MODE = 9  # course is external (not just subject)
 
 # customisation:
 # choose whether to remove all students from subject channels first
-REMOVE_OLD_STUDENTS = False
+WILL_REMOVE_OLD_STUDENTS = False
 
 
 def main():
-    if REMOVE_OLD_STUDENTS:
+    if WILL_REMOVE_OLD_STUDENTS:
         input("Are you sure you want to remove students?! Cancel program to stop now.")
 
     # make Slack API connection
@@ -49,7 +49,7 @@ def main():
     # PP.pprint(channel_details)
 
     # optionally, clear out non-enrolled students
-    if REMOVE_OLD_STUDENTS:
+    if WILL_REMOVE_OLD_STUDENTS:
         print("Removing all students from subject channels")
         remove_students(client, channel_details, slack_user_details, STAFF_FILE)
 

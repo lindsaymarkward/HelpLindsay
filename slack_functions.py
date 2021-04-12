@@ -1,10 +1,11 @@
 """
-Generic (reusable) Slack functions for programs that use Slack's Python Client API
-https://github.com/slackapi/python-slackclient
+Generic (reusable) Slack functions for programs that use the Python Slack SDK
+https://github.com/slackapi/python-slack-sdk
 https://slackapi.github.io/python-slackclient/conversations.html
 https://api.slack.com/methods
 """
-from slackclient import SlackClient
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
 from private import SLACK_AUTH_TOKEN, members_to_keep
 from pprint import PrettyPrinter
 
@@ -26,11 +27,11 @@ def get_slack_users(client):
     # get all users using pagination (one call won't return all)
     more_users = True
     while more_users:
-        response = client.api_call("users.list", limit=500, cursor=next_cursor)
+        # response = client.api_call("users.list", limit=500, cursor=next_cursor)
+        response = client.users_list(limit=500, cursor=next_cursor)
         # PP.pprint(response)
         try:
-            retrieved_users = response['members']
-            users += retrieved_users
+            users += response['members']
             next_cursor = response['response_metadata']['next_cursor']
             if not next_cursor:
                 more_users = False
@@ -54,12 +55,12 @@ def get_slack_users(client):
 
 def get_slack_channels(client):
     """
-    Get all channels from Slack team
+    Get all public channels from Slack team
     :param client: SlackClient API object setup for a particular Slack team
     :return: dictionary of {channel name: id}
     """
     name_to_id = {}
-    response = client.api_call("conversations.list")
+    response = client.conversations_list()
     # PP.pprint(response)
     channels = response['channels']
     for channel in channels:
@@ -77,7 +78,7 @@ def get_slack_channels_members(client):
     channels = get_slack_channels(client)
     # for each channel, get its members and store them in the details dictionary
     for name, slack_id in channels.items():
-        response = client.api_call("conversations.members", channel=slack_id, limit=999)
+        response = client.conversations_members(channel=slack_id, limit=999)
         try:
             # PP.pprint(response)
             members = response['members']
@@ -96,16 +97,26 @@ def get_slack_groups_members(client):
     :return: dictionary of {group name: (id, [members])}
     """
     group_details = {}
-    response = client.api_call("groups.list", exclude_archived=True)
-    # PP.pprint(response)
-    groups = response['groups']
+    # get only private conversations (includes private groups, unlike conversations.list)
+    response = client.users_conversations(types="private_channel", exclude_archived=True)
+    # print(len(response['channels']))
+    groups = response['channels']
     for group in groups:
-        group_details[group['name']] = (group['id'], group['members'])
+        name = group['name']
+        slack_id = group['id']
+        try:
+            response = client.conversations_members(channel=slack_id, limit=999)
+            members = response['members']
+            group_details[name] = (slack_id, members)
+        except KeyError:
+            print("Ignoring empty/archived channel: {}".format(name))
+            # PP.pprint(response)
     return group_details
 
 
 def rename_groups(client, from_prefix, to_prefix):
     """Rename all groups starting with from_prefix to start with to_prefix."""
+    # NOTE: deprecated groups.* won't work. need admin.conversations.write... which needs Enterprise $ plan
     slack_groups = get_slack_groups_members(client)
     for group_name, details in slack_groups.items():
         if group_name.startswith(from_prefix):
@@ -122,7 +133,7 @@ def clear_purposes(client, group_ids):
     :return: None
     """
     for group_id in group_ids:
-        client.api_call("groups.setPurpose", channel=group_id, purpose="")
+        client.conversations_setPurpose(channel=group_id, purpose="")
 
 
 def kick_members(client, channel_id, members, members_to_keep):
@@ -135,11 +146,11 @@ def kick_members(client, channel_id, members, members_to_keep):
     :return:
     """
     # remove members to keep from members to kick
-    to_kick = set(members) - set(members_to_keep)
-    print("Kicking:", to_kick)
-    for member in to_kick:
+    members_to_kick = set(members) - set(members_to_keep)
+    print("Kicking:", members_to_kick)
+    for member in members_to_kick:
         print(member, end=' ')
-        client.api_call("conversations.kick", channel=channel_id, user=member)
+        client.conversations_kick(channel=channel_id, user=member)
     print()
 
 
@@ -174,7 +185,7 @@ def remove_students(client, all_channel_details, slack_user_details,
         # PP.pprint(students_to_remove)
         for student_id in students_to_remove:
             try:
-                result = client.api_call("conversations.kick", channel=channel_id, user=student_id)
+                result = client.conversations_kick(channel=channel_id, user=student_id)
                 # PP.pprint(result)
                 count += 1
             except Exception as error:
@@ -183,6 +194,7 @@ def remove_students(client, all_channel_details, slack_user_details,
 
 
 def clear_channels(client, channels_to_clear):
+    """Remove all users from channels passed in."""
     channel_details = get_slack_channels_members(client)
     for channel in channels_to_clear:
         channel = channel.strip()
@@ -195,11 +207,21 @@ def clear_channels(client, channels_to_clear):
             print(repr(error))
 
 
-def test_something():
-    sc = SlackClient(SLACK_AUTH_TOKEN)
+def delete_all_messages(client, channel_id):
+    """Delete all messages found in channel/group passed in."""
+    response = client.conversations_history(channel=channel_id)
+    for message in response['messages']:
+        ts = message['ts']
+        result = client.chat_delete(channel=channel_id, ts=ts)
+        if not result['ok']:
+            print(result['error'])
 
-    users = get_slack_users(sc)
-    print(len(users))
+
+def test_something():
+    client = WebClient(token=SLACK_AUTH_TOKEN)
+
+    # users = get_slack_users(client)
+    # print(len(users))
 
     # channels_to_clear = ["externalcp1404", "externalcp3402"]
     # clear_channels(sc, channels_to_clear)
