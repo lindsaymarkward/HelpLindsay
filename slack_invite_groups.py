@@ -8,22 +8,20 @@ Specify the email address for any staff to be added to all groups in the private
 
 import csv
 from pprint import PrettyPrinter
-from slackclient import SlackClient
+from slack_sdk import WebClient
 
 from private import SLACK_AUTH_TOKEN, STAFF_TO_ADD
 from slack_functions import get_slack_groups_members, get_slack_users
-
-__author__ = 'Lindsay Ward'
 
 STUDENT_FILE = "data/cp3402groups.csv"
 # STUDENT_FILE = "data/externals.csv"
 
 # Configuration: set whether or not to create groups if they're not present
-WILL_CREATE_GROUPS = True
+WILL_CREATE_GROUPS = False
 
 
 def main():
-    client = SlackClient(SLACK_AUTH_TOKEN)
+    client = WebClient(SLACK_AUTH_TOKEN)
     pp = PrettyPrinter(indent=4)
 
     # get all students and their groups
@@ -40,7 +38,8 @@ def main():
     missing_students = []
     invited_count = 0
 
-    for group_name, students in groups_students.items():
+    for group_name, student_emails in groups_students.items():
+        student_slack_ids = []
         print("Group: {}".format(group_name))
         # make group if it doesn't exist
         try:
@@ -50,7 +49,7 @@ def main():
             if WILL_CREATE_GROUPS:
                 print("Adding it now.")
                 try:
-                    response = client.api_call("groups.create", name=group_name)
+                    response = client.conversations_create(name=group_name)
                     # add new group details to current groups dictionary in same format (id, [members])
                     group_id = response['group']['id']
                     group_details[group_name] = (group_id, [])
@@ -63,22 +62,25 @@ def main():
                 continue
 
         # add students to group
-        for email in students:
+        for email in student_emails:
             # get slack ID or if user is missing, keep track of them separately
             try:
                 slack_id = slack_user_details[email][0]
+                student_slack_ids.append(slack_id)
                 # print(group, slack_id, email)
             except KeyError:
                 missing_students.append(email)
+                print(f"Missing {email}")
                 continue
 
+            # TODO: invite takes a list of IDs, do it all in one call
             # invite students to their groups
             try:
                 if slack_id not in group_details[group_name][1]:
                     print("Inviting {} to {}".format(email, group_name))
                     invited_count += 1
                     try:
-                        client.api_call("groups.invite", channel=group_id, user=slack_id)
+                        client.conversations_invite(channel=group_id, users=[slack_id])
                     except Exception as error:
                         print(error)
                         print("ERROR inviting {} to {}\n".format(email, group_name))
@@ -131,7 +133,7 @@ def get_group_lists(filename):
             groups_of_students[group] = [email]
 
     # add staff members to groups
-    if len(STAFF_TO_ADD) > 0:
+    if STAFF_TO_ADD:
         for group in groups_of_students:
             groups_of_students[group] += STAFF_TO_ADD
     input_file.close()
@@ -145,7 +147,7 @@ def run_tests():
     pp.pprint(student_details)
 
     # test getting Slack groups
-    client = SlackClient(SLACK_AUTH_TOKEN)
+    client = WebClient(SLACK_AUTH_TOKEN)
     slack_groups = get_slack_groups_members(client)
     pp.pprint(slack_groups)
 
