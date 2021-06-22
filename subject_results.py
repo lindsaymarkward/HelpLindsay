@@ -1,8 +1,9 @@
 """
 IT@JCU Subject Spreadsheet Solution
+NO guarantees are given with this program :)
 Lindsay Ward
 
-Create subject results comprehensive spreadsheets and grade CSVs from:
+Create subject results comprehensive spreadsheets, and optionally grade CSVs, from:
 - Class list from Student Management System (SMS)
 - LearnJCU Ultra grade centre download/export
 - Blank subject results spreadsheet (template)
@@ -11,11 +12,12 @@ How To Use:
 * Update user-customisable constants for desired directory and LearnJCU Grade Centre filename
   Creating the CSVs from the final grades (using xlwings) is by far the slowest
   set WILL_CREATE_CSV to False to skip this step (and do it yourself in Excel)
-* Download LearnJCU Grade Centre file (xls extension but actually a CSV) to DIRECTORY_DATA folder
+* Download LearnJCU Grade Centre file (xls extension but is actually a CSV) to DIRECTORY_DATA folder
   Edit grade centre spreadsheet:
     - leave only desired assessments, in desired order, with desired names
-    - replace number/id after pipe | with assessment weighting (e.g. Assignment 1 [Total Pts: 100 Score] |20)
+    - replace the number/id after pipe | with assessment weighting, e.g., 20% = "Assignment 1 [Total Pts: 100 Score] |20"
 * Put all related student class list CSV files in DIRECTORY_DATA
+  That is, if your LearnJCU site is a merge of 3 subjects, you can include all 3 subjects to be processed at once :)
   The program will process each of the CSV files using the one LearnJCU Grade Centre file
   so do not have any other CSV files in this folder
 * Run
@@ -23,12 +25,11 @@ How To Use:
     Names will match class list CSV file names + "Results" - csv & xlsx
 * Edit these to complete and confirm all is OK
   If you need to update small things, just do so and re-run to produce new output files
-  No site (campus, mode) seems to be present in data, so add this and staff names to results sheet
-  The CSV output can also be ignored and you can just export one
-  from the xlsx file if you update the results spreadsheet manually
-NO guarantees are given with this program :)
+  Add your name to results sheet, other details should be automatic
+  If you choose not to output a CSV, you can just export one manually (save as)
+  from the xlsx file - useful if you want to update the results spreadsheet
 
-TODO: consider rewriting with pandas
+TODO: consider rewriting with numpy/pandas
 https://stackoverflow.com/questions/16503560/read-specific-columns-from-a-csv-file-with-csv-module
 """
 import csv
@@ -51,9 +52,10 @@ SHEET_CLASS = 'StudentOne'
 SHEET_RESULTS = 'RawResults'
 LAST_HEADING_BEFORE_ASSESSMENTS = 'Child Subject ID'  # for the column number without using an absolute number
 LAST_HEADING_BEFORE_ASSESSMENTS_BACKUP = 'Availability'  # for grade centre exports from non-merged LearnJCU sites
-COLUMN_GRADE_CENTRE_ID = 0  # 3  # Numbered from 0 (csv/list)
+COLUMN_GRADE_CENTRE_ID = 3  # 3  # Numbered from 0 (csv/list)
 ROW_CLASS_FIRST_STUDENT = 3
 COLUMN_CLASS_SUBJECT_CODE = 6
+COLUMN_CLASS_SUBJECT_NAME = 9
 COLUMN_CLASS_YEAR = 10
 COLUMN_CLASS_STUDY_PERIOD = 11
 COLUMN_CLASS_STUDENT_ID = 13  # N
@@ -190,8 +192,16 @@ def get_student_results(student_grade_centre_rows, students, assessments):
 
 def write_results(student_results, class_list, assessments, output_filename):
     """Write student details and scores to results spreadsheet."""
-    workbook = openpyxl.load_workbook(filename=FILE_RESULTS_BLANK)
+    # Get subject information (needed for both sheets)
+    # Assume filename format is like "CP1404 TSV SP1 2021-Results.xlsx"
+    subject_name = class_list[0][COLUMN_CLASS_SUBJECT_NAME]
+    campus = output_filename.split()[1]
+    subject_code = class_list[0][COLUMN_CLASS_SUBJECT_CODE]
+    year = class_list[0][COLUMN_CLASS_YEAR]
+    study_period = class_list[0][COLUMN_CLASS_STUDY_PERIOD]
+
     # Add student scores to results data sheet
+    workbook = openpyxl.load_workbook(filename=FILE_RESULTS_BLANK)
     sheet = workbook[SHEET_CLASS]
     # Write all data from class list to results StudentOne sheet
     for i, student in enumerate(class_list):
@@ -206,6 +216,9 @@ def write_results(student_results, class_list, assessments, output_filename):
         formula = f"=INDEX({SHEET_RESULTS}!A${ROW_RESULTS_FIRST_STUDENT}:Q$320,MATCH({column_letter_id}{reference_row},{SHEET_RESULTS}!B${ROW_RESULTS_FIRST_STUDENT}:B$320,0),{column_number_grade})"
         sheet.cell(row=current_row, column=COLUMN_CLASS_STUDENT_ID + 3, value=formula)
 
+    # Write subject reference to StudentOne sheet (needed for CSV for system)
+    sheet.cell(row=1, column=COLUMN_CLASS_STUDENT_ID + 2, value=f"{subject_code} {campus}")
+
     # Add formulas to raw results sheet to refer to student ID and name
     sheet = workbook[SHEET_RESULTS]
     for i in range(len(class_list)):
@@ -214,17 +227,16 @@ def write_results(student_results, class_list, assessments, output_filename):
         sheet.cell(row=current_row, column=2, value=f"={SHEET_CLASS}!N{reference_row}")
         sheet.cell(row=current_row, column=3, value=f"={SHEET_CLASS}!O{reference_row}")
 
-    # Get and write subject information
-    subject_code = class_list[0][COLUMN_CLASS_SUBJECT_CODE]
-    year = class_list[0][COLUMN_CLASS_YEAR]
-    study_period = class_list[0][COLUMN_CLASS_STUDY_PERIOD]
+    # Write subject information to Results
+    sheet.cell(row=1, column=3, value=subject_name)
+    sheet.cell(row=2, column=3, value=campus)
     sheet.cell(row=3, column=3, value=year)
     sheet.cell(row=4, column=3, value=study_period)
     sheet.cell(row=5, column=3, value=subject_code)
 
     # Add assessment headings
     # Assume spreadsheet structure is based on 13=ROW_FIRST_RAW_DATA, 10=%, 11=Out Of, 12=Title
-    # assessment looks like (7, 'Assignment 1 - Movies to Watch 1.0', 100.0, 20)
+    # assessment looks like (7, 'Assignment 1', 100.0, 20)
     row_weight = ROW_RESULTS_FIRST_STUDENT - 3
     row_out_of = ROW_RESULTS_FIRST_STUDENT - 2
     row_title = ROW_RESULTS_FIRST_STUDENT - 1
