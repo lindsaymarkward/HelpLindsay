@@ -192,13 +192,6 @@ def get_student_results(student_grade_centre_rows, students, assessments):
 
 def write_results(student_results, class_list, assessments, output_filename):
     """Write student details and scores to results spreadsheet."""
-    # Get subject information (needed for both sheets)
-    # Assume filename format is like "CP1404 TSV SP1 2021-Results.xlsx"
-    subject_name = class_list[0][COLUMN_CLASS_SUBJECT_NAME]
-    campus = output_filename.split()[1]
-    subject_code = class_list[0][COLUMN_CLASS_SUBJECT_CODE]
-    year = class_list[0][COLUMN_CLASS_YEAR]
-    study_period = class_list[0][COLUMN_CLASS_STUDY_PERIOD]
 
     # Add student scores to results data sheet
     workbook = openpyxl.load_workbook(filename=FILE_RESULTS_BLANK)
@@ -216,9 +209,6 @@ def write_results(student_results, class_list, assessments, output_filename):
         formula = f"=INDEX({SHEET_RESULTS}!A${ROW_RESULTS_FIRST_STUDENT}:Q$320,MATCH({column_letter_id}{reference_row},{SHEET_RESULTS}!B${ROW_RESULTS_FIRST_STUDENT}:B$320,0),{column_number_grade})"
         sheet.cell(row=current_row, column=COLUMN_CLASS_STUDENT_ID + 3, value=formula)
 
-    # Write subject reference to StudentOne sheet (needed for CSV for system)
-    sheet.cell(row=1, column=COLUMN_CLASS_STUDENT_ID + 2, value=f"{subject_code} {campus}")
-
     # Add formulas to raw results sheet to refer to student ID and name
     sheet = workbook[SHEET_RESULTS]
     for i in range(len(class_list)):
@@ -227,7 +217,13 @@ def write_results(student_results, class_list, assessments, output_filename):
         sheet.cell(row=current_row, column=2, value=f"={SHEET_CLASS}!N{reference_row}")
         sheet.cell(row=current_row, column=3, value=f"={SHEET_CLASS}!O{reference_row}")
 
-    # Write subject information to Results
+    # Get and write subject information to Results
+    # Assume filename format is like "CP1404 TSV SP1 2021-Results.xlsx"
+    subject_name = class_list[0][COLUMN_CLASS_SUBJECT_NAME]
+    campus = output_filename.split()[1]
+    subject_code = class_list[0][COLUMN_CLASS_SUBJECT_CODE]
+    year = class_list[0][COLUMN_CLASS_YEAR]
+    study_period = class_list[0][COLUMN_CLASS_STUDY_PERIOD]
     sheet.cell(row=1, column=3, value=subject_name)
     sheet.cell(row=2, column=3, value=campus)
     sheet.cell(row=3, column=3, value=year)
