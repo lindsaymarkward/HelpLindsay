@@ -13,7 +13,7 @@ from slack_sdk import WebClient
 from private import SLACK_AUTH_TOKEN, STAFF_TO_ADD
 from slack_functions import get_slack_groups_members, get_slack_users
 
-STUDENT_FILE = "data/cp3402groups.csv"
+STUDENT_FILE = "data/cp3402groupsnew.csv"
 # STUDENT_FILE = "data/externals.csv"
 
 # Configuration: set whether or not to create groups if they're not present
@@ -24,34 +24,38 @@ def main():
     client = WebClient(SLACK_AUTH_TOKEN)
     pp = PrettyPrinter(indent=4)
 
-    # get all students and their groups
+    # get all students and their groups (includes staff)
+    print("Getting student data from file")
     groups_students = get_group_lists(STUDENT_FILE)
     pp.pprint(groups_students)
 
     # get all users from Slack
+    print("Getting current Slack user data from workspace")
     slack_user_details = get_slack_users(client)
 
     # get all groups like {'name': (group ID, [member IDs])}
+    print("Getting Slack group member details")
     group_details = get_slack_groups_members(client)
+    print("Got {} Slack groups".format(len(group_details)))
     # pp.pprint(group_details)
 
     missing_students = []
     invited_count = 0
 
     for group_name, student_emails in groups_students.items():
-        student_slack_ids = []
+        student_slack_ids_to_add = []
         print("Group: {}".format(group_name))
-        # make group if it doesn't exist
         try:
             group_id = group_details[group_name][0]
         except KeyError:
             print("No {} group.".format(group_name))
             if WILL_CREATE_GROUPS:
+                # make group if it doesn't exist
                 print("Adding it now.")
                 try:
                     response = client.conversations_create(name=group_name)
                     # add new group details to current groups dictionary in same format (id, [members])
-                    group_id = response['group']['id']
+                    group_id = response['channel']['id']  # UNTESTED
                     group_details[group_name] = (group_id, [])
                 except Exception as error:
                     print(error)
@@ -66,31 +70,25 @@ def main():
             # get slack ID or if user is missing, keep track of them separately
             try:
                 slack_id = slack_user_details[email][0]
-                student_slack_ids.append(slack_id)
-                # print(group, slack_id, email)
+                if slack_id not in group_details[group_name][1]:
+                    student_slack_ids_to_add.append(slack_id)
+                    print(f"Going to add {email} to {group_name}")
+                    invited_count += 1
             except KeyError:
                 missing_students.append(email)
                 print(f"Missing {email}")
                 continue
 
-            # TODO: invite takes a list of IDs, do it all in one call
-            # invite students to their groups
+        # TODO: TEST: invite takes a list of IDs, do it all in one call
+        # invite students to their groups
             try:
-                if slack_id not in group_details[group_name][1]:
-                    print("Inviting {} to {}".format(email, group_name))
-                    invited_count += 1
-                    try:
-                        client.conversations_invite(channel=group_id, users=[slack_id])
-                    except Exception as error:
-                        print(error)
-                        print("ERROR inviting {} to {}\n".format(email, group_name))
+                client.conversations_invite(channel=group_id, users=student_slack_ids_to_add)
             except Exception as error:
                 print(error)
-                print("ERROR with lookup, missing group {}?\n".format(group_name))
+                print(f"ERROR inviting students to {group_name}\n")
 
     print("Invited people {} times".format(invited_count))
-    print("\n{} people not in Slack:\n{}".format(len(missing_students),
-                                                 "\n".join(missing_students)))
+    print(f"\n{len(missing_students)} people not in Slack:\n", "\n".join(missing_students))
     # output text file with missing students in form ready for bulk Slack invite (comma separated)
     with open("output/nonslacker_groups.txt", "w") as f:
         f.write(", ".join(missing_students))
