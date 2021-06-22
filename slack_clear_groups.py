@@ -22,11 +22,11 @@ def main():
     # pp.pprint(group_details)
 
     # for testing a small number, not all in file:
-    # groups_to_clear = ["cp3402-project-team01", "cp3402-project-team02"]
+    groups_to_clear = ["cp3402-project-team18"]
 
     # for when all groups are in file
-    with open(FILENAME, "r") as groups_file:
-        groups_to_clear = [line.strip() for line in groups_file]
+    # with open(FILENAME, "r") as groups_file:
+    #     groups_to_clear = [line.strip() for line in groups_file]
 
     for group in groups_to_clear:
         try:
@@ -43,7 +43,7 @@ def main():
             print(repr(error))
 
 
-# main()
+main()
 
 
 def rename():
