@@ -50,9 +50,12 @@ FILE_GRADE_CENTRE = 'learnjcu_grade_centre.xls'
 # Some row and column values are magic numbers; could be extracted as constants in future
 SHEET_CLASS = 'StudentOne'
 SHEET_RESULTS = 'RawResults'
-LAST_HEADING_BEFORE_ASSESSMENTS = 'Child Subject ID'  # for the column number without using an absolute number
-LAST_HEADING_BEFORE_ASSESSMENTS_BACKUP = 'Availability'  # for grade centre exports from non-merged LearnJCU sites
-COLUMN_GRADE_CENTRE_ID = 3  # 3  # Numbered from 0 (csv/list)
+# If Overall Grade is set, this will be the start text of the last column, otherwise the
+LAST_HEADING_BEFORE_ASSESSMENTS_OVERALL = "Overall Grade"
+LAST_HEADING_BEFORE_ASSESSMENTS_NO_OVERALL = 'Child Subject ID'  # for grade centre exports from merged LearnJCU sites
+LAST_HEADING_BEFORE_ASSESSMENTS_NO_MERGE = 'Availability'  # for grade centre exports from non-merged LearnJCU sites
+COLUMN_GRADE_CENTRE_ID = 3  # 3  # Numbered from 0 (csv/list) BUT!! Not always the same, so using dynamic (below)
+STUDENT_ID_HEADING_TEXT = "Student ID"
 ROW_CLASS_FIRST_STUDENT = 3
 COLUMN_CLASS_SUBJECT_CODE = 6
 COLUMN_CLASS_SUBJECT_NAME = 9
@@ -62,7 +65,7 @@ COLUMN_CLASS_STUDENT_ID = 13  # N
 COLUMN_RESULTS_FIRST_ASSESSMENT = 5  # Numbered from 1 (openpyxl)
 COLUMN_RESULTS_FINAL_GRADE_LETTER = 'M'  # O for U/S/X grades in 2020-1, M for normal
 ROW_RESULTS_FIRST_STUDENT = 13
-TEXT_TO_REMOVE = "Reply to Post("
+TEXT_TO_REMOVE = "Reply to Post("  # Now handled for anything with parentheses
 
 
 def main():
@@ -135,11 +138,16 @@ def get_assessments(input_filename):
         raise RuntimeError(f"ERROR: Incorrect format; create {FILE_GRADE_CENTRE} again from download without changing format (copy and paste values into downloaded file)")
     headings = rows[0]
 
-    # Assessments start after the column with heading LAST_HEADER_BEFORE_ASSESSMENTS
-    try:
-        first_assessment_index = headings.index(LAST_HEADING_BEFORE_ASSESSMENTS) + 1
-    except ValueError:
-        first_assessment_index = headings.index(LAST_HEADING_BEFORE_ASSESSMENTS_BACKUP) + 1
+    # Get first assessment index based on possibilities of Grade Centre exports
+    last_indexes = [i for i, heading in enumerate(headings) if heading.startswith(LAST_HEADING_BEFORE_ASSESSMENTS_OVERALL)]
+    if last_indexes:
+        first_assessment_index = last_indexes[0] + 1
+    else:
+        # Assessments start after the column with heading LAST_HEADER_BEFORE_ASSESSMENTS
+        try:
+            first_assessment_index = headings.index(LAST_HEADING_BEFORE_ASSESSMENTS_NO_OVERALL) + 1
+        except ValueError:
+            first_assessment_index = headings.index(LAST_HEADING_BEFORE_ASSESSMENTS_NO_MERGE) + 1
     assessment_headings = headings[first_assessment_index:]
     assessments = []
     # Assessment data looks like (last value needs to be set manually in spreadsheet):
@@ -156,14 +164,19 @@ def get_assessments(input_filename):
             assessments.append((first_assessment_index + i, title, score, weight))
         except IndexError:
             raise RuntimeError(f"ERROR with format of {DIRECTORY_DATA}/{input_filename}")
-    # Return both processed assessments and rest of student data rows
-    return assessments, rows[1:]
+    # Return both processed assessments and all rows (including headings)
+    return assessments, rows
 
 
 def get_student_results(student_grade_centre_rows, students, assessments):
     """Get relevant student results from raw data in form based on assessments."""
     student_results = []
-    grade_centre_ids = [row[COLUMN_GRADE_CENTRE_ID] for row in student_grade_centre_rows]
+    # Get column for Student ID from grade centre (it's not always the same!)
+    column_grade_centre_id = student_grade_centre_rows[0].index(STUDENT_ID_HEADING_TEXT)
+    # Now that we have the relevant heading detail, remove heading row
+    student_grade_centre_rows = student_grade_centre_rows[1:]
+
+    grade_centre_ids = [row[column_grade_centre_id] for row in student_grade_centre_rows]
     for student in students:
         student_id = student[COLUMN_CLASS_STUDENT_ID]
         student_name = student[COLUMN_CLASS_STUDENT_ID + 1]
@@ -177,14 +190,17 @@ def get_student_results(student_grade_centre_rows, students, assessments):
             student_results.append(student_result)
             continue
         for assessment in assessments:
+            cell_value = student_grade_centre_rows[index][assessment[0]]
             try:
-                # Strip "Reply to Post(81.60)" (e.g. unposted final assessment item results)
-                cell_value = student_grade_centre_rows[index][assessment[0]]
-                cell_value = cell_value.strip(TEXT_TO_REMOVE).strip(")")
                 score = float(cell_value)
             except ValueError:
-                # Replace non-scores like 'In Progress' or 'Needs Grading' with blanks
-                score = None
+                # Some cells have values like "In Progress(59.50)", which should just be the number
+                if "(" in cell_value:
+                    cell_value = cell_value[cell_value.find("(") + 1:-1]
+                    score = float(cell_value)
+                else:
+                    # Replace non-scores like 'In Progress' or 'Needs Grading' with blanks
+                    score = None
             student_result.append(score)
         student_results.append(student_result)
     return student_results
