@@ -447,7 +447,34 @@ def day_16():
 
 
 def day_22():
-    pass
+    file_in = open("day22.txt")
+    player_1 = []
+    player_2 = []
+    file_in.readline()  # remove first header
+    current_player = player_1  # alias
+    for line in file_in:
+        try:
+            current_player.append(int(line))
+        except ValueError:
+            current_player = player_2
+    while player_1 and player_2:
+        if player_1[0] > player_2[0]:
+            current_player = player_1
+            other_player = player_2
+        else:
+            current_player = player_2
+            other_player = player_1
 
+        current_player.append(current_player.pop(0))
+        current_player.append(other_player.pop(0))
+
+    # print(player_1)
+    # print(player_2)
+    values = list(range(len(current_player), 0, 0-1))
+    total = 0
+    for i in range(len(current_player)):
+        total += values[i] * current_player[i]
+
+    print(total)
 
 day_22()
