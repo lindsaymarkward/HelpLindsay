@@ -3,7 +3,8 @@ Script to invite all students in class list file to the Slack channels for each 
 Takes unedited XLS file from JCU StaffOnline (subject "CP%", study period "SP1 or 2"), download the file
 """
 import xlrd
-from slackclient import SlackClient
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
 
 from private import SLACK_AUTH_TOKEN
 from slack_functions import get_slack_channels_members, get_slack_users, PP, get_slack_channels, remove_students
@@ -29,7 +30,7 @@ def main():
         input("Are you sure you want to remove students?! Cancel program to stop now.")
 
     # make Slack API connection
-    client = SlackClient(SLACK_AUTH_TOKEN)
+    client = WebClient(SLACK_AUTH_TOKEN)
 
     # get all students and subjects they do
     print("Getting student data from file")
@@ -76,10 +77,19 @@ def main():
                     print("Inviting {} to {}".format(email, channel_name))
                     invited_count += 1
                     try:
-                        client.api_call("conversations.invite", channel=channel_id, users=[slack_id])
-                    except Exception as error:
+                        response = client.conversations_invite(channel=channel_id, users=[slack_id])
+                    except SlackApiError as error:
+                        if error.response['error'] == 'already_in_channel':
+                            continue
+                        if error.response['error'] == "channel_not_found":
+                            missing_channels.add(channel_name)
+                            continue
                         print("ERROR inviting ({})\n".format(error))
-                        missing_channels.add(channel_name)
+                        print(error.response)
+                        input("Pausing")
+                        # TODO: when get a 'ratelimited' error, figure out how to get response "Retry-After:"
+                        # https://github.com/slackapi/python-slack-sdk/issues/436#issuecomment-499692624
+                        # (old, but time/wait is relevant)
             except Exception as error:
                 print("ERROR with {} lookup ({})\n".format(channel_name, error))
 
@@ -171,7 +181,7 @@ def get_student_data(filename=STUDENT_FILE):
 
 def check_channels():
     """Check for missing subject channels based on input file."""
-    slack = SlackClient(SLACK_AUTH_TOKEN)
+    slack = WebClient(SLACK_AUTH_TOKEN)
     # these = ['CP1406', 'CP1806', 'CP5632', 'CP5046', 'CP5330']
     # students, subjects = get_group_lists()
     substitutions = create_substitutions()

@@ -5,7 +5,6 @@ https://slackapi.github.io/python-slackclient/conversations.html
 https://api.slack.com/methods
 """
 from slack_sdk import WebClient
-from slack_sdk.errors import SlackApiError
 from private import SLACK_AUTH_TOKEN, members_to_keep
 from pprint import PrettyPrinter
 
@@ -27,7 +26,6 @@ def get_slack_users(client):
     # get all users using pagination (one call won't return all)
     more_users = True
     while more_users:
-        # response = client.api_call("users.list", limit=500, cursor=next_cursor)
         response = client.users_list(limit=500, cursor=next_cursor)
         # PP.pprint(response)
         try:
@@ -38,7 +36,7 @@ def get_slack_users(client):
         except KeyError:
             more_users = False
 
-    # print(len(users), "users retreived")
+    print(len(users), "users retrieved")
     for user in users:
         # PP.pprint(user)
         try:
@@ -122,7 +120,7 @@ def rename_groups(client, from_prefix, to_prefix):
         if group_name.startswith(from_prefix):
             new_name = group_name.replace(from_prefix, to_prefix)
             print(group_name, "->", new_name)
-            client.api_call("groups.rename", channel=details[0], name=new_name)
+            client.groups_rename(channel=details[0], name=new_name)
 
 
 def clear_purposes(client, group_ids):
@@ -235,12 +233,6 @@ def test_something():
     # channel_details = get_slack_channels_members(sc)
     # PP.pprint(channel_details)
     # print(len(channel_details), "channels in workspace")
-
-    # temp_channel_id = 'C5CRVCF97'
-    # response = sc.api_call("conversations.members", channel=temp_channel_id)
-    # members = response['members']
-    # PP.pprint(members)
-    # kick_members(sc, temp_channel_id, members, {ID_LINDSAY})
 
     # results = get_slack_groups(sc)
     # PP.pprint(results)

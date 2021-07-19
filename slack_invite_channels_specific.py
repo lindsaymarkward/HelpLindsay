@@ -2,6 +2,8 @@
 Script to invite students to Slack public channels for channel work
 Takes CSV file in the format: email,team (with header) - same as private groups/teams (CATME)
 Specify the email address for any staff to be added to all channels in the private.py file
+
+NOTE: This is probably defunct now (and would need updating for new Slack API)
 """
 
 import csv
