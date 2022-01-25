@@ -11,43 +11,42 @@ Lindsay Ward, JCU
 from icalendar import Calendar, Event
 from datetime import datetime, timedelta
 
-__author__ = 'Lindsay Ward'
 FILE_NAME = "output/JCU_Weeks.ics"
-WEEKS_IN_STUDY_PERIOD = 13
 
 
-def create_on_campus_calendar():
+def main():
     """Create a single calendar with one standard on-campus study period dates."""
 
     # create "calendar" to add events to
     cal = Calendar()
 
-    study_periods = ["SP1", "SP2"]
+    # study_periods = ["SP1", "SP2"]
+    study_periods = ["SP1", "SP2", "TR1", "TR2", "TR3"]
     for study_period in study_periods:
 
         # get required dates - week 1 and lecture recess; others are derived
         week1text = input(study_period + " Week 1 Monday Date (dd/mm/yy): ")
-        week1date = datetime.strptime(week1text, "%d/%m/%y").date()
+        week_1_date = datetime.strptime(week1text, "%d/%m/%y").date()
         lecture_recess_text = input("Lecture Recess Monday Date (dd/mm/yy): ")
         lecture_recess_date = datetime.strptime(lecture_recess_text, "%d/%m/%y").date()
 
         # add O Week event (1 week before Week 1)
         event = Event()
         event.add('summary', study_period + ' O Week')
-        event.add('dtstart', week1date - timedelta(days=7))
+        event.add('dtstart', week_1_date - timedelta(days=7))
         cal.add_component(event)
 
         # loop through all numbered weeks
-        week_date = week1date
+        week_date = week_1_date
         week_number = 1
-        for i in range(WEEKS_IN_STUDY_PERIOD + 1):
+        weeks_in_study_period = 10 if study_period.startswith("TR") else 13
+        for i in range(weeks_in_study_period + 1):
             event = Event()
             # handle lecture recess, not incrementing week number
             if week_date == lecture_recess_date:
                 event.add('summary', study_period + ' Lecture Recess')
             else:
-                event.add('summary',
-                          study_period + ' Week ' + str(week_number))
+                event.add('summary', study_period + ' Week ' + str(week_number))
                 week_number += 1
 
             event.add('dtstart', week_date)
@@ -73,49 +72,4 @@ def create_on_campus_calendar():
     calendar_file.close()
 
 
-def create_off_campus_calendar(weeks_in_study_period=10):
-    """
-    Create one calendar with all 6 off-campus study periods in it
-    :param weeks_in_study_period: how many weeks are in a normal study period, default = 10
-    :return:
-    """
-    # each tuple in the list looks like (study period, week 1 date, week before lecture recess)
-    # start_dates = [('SP21/51', '13/03/17', 5), ('SP22/52', '17/07/17', 5), ('SP23/53', '13/11/17', 5)]
-    start_dates = [('SP21/51', '12/03/18', 5), ('SP22/52', '09/07/18', 5), ('SP23/53', '05/11/18', 6)]
-
-    # create "calendar" to add events to
-    cal = Calendar()
-
-    # loop through study periods (order doesn't matter)
-    for study_period, start_date, lecture_recess_week in start_dates:
-        print("{} starts {}, lec rec after week {}".format(study_period,
-                                                           start_date,
-                                                           lecture_recess_week))
-
-        # loop through all numbered weeks
-        week_date = datetime.strptime(start_date, "%d/%m/%y").date()
-        week_number = 1
-        for i in range(weeks_in_study_period + 1):
-            event = Event()
-
-            # handle lecture recess, not incrementing week number
-            if i == lecture_recess_week:
-                event.add('summary', study_period + ' Lecture Recess')
-            else:
-                event.add('summary',
-                          "{} Week {}".format(study_period, week_number))
-                week_number += 1
-
-            event.add('dtstart', week_date)
-            cal.add_component(event)
-            # add one week for next event
-            week_date += timedelta(days=7)
-
-    # write calendar file to disk (open the file to add events to Calendar program)
-    calendar_file = open(FILE_NAME, 'wb')
-    calendar_file.write(cal.to_ical())
-    calendar_file.close()
-
-
-create_on_campus_calendar()
-# create_off_campus_calendar()
+main()
