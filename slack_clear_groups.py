@@ -2,6 +2,8 @@
 Program to clear groups by kicking out all members (except specified ones)
 and clearing the purpose of the groups
 """
+import ssl
+
 from pprint import PrettyPrinter
 from slack_sdk import WebClient
 from private import SLACK_AUTH_TOKEN, members_to_keep
@@ -15,18 +17,22 @@ ARCHIVE_GROUP = False
 def main():
     """Remove users, clear purpose and delete messages from groups."""
     pp = PrettyPrinter(indent=4)
-    client = WebClient(SLACK_AUTH_TOKEN)
+    # make Slack API connection
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+    client = WebClient(token=SLACK_AUTH_TOKEN, ssl=ssl_context)
     # TODO: would be more helpful if members_to_keep was specified as emails or Slack usernames instead of Slack IDs
 
     group_details = get_slack_groups_members(client)
     # pp.pprint(group_details)
 
     # for testing a small number, not all in file:
-    groups_to_clear = ["cp3402-project-team18"]
+    # groups_to_clear = ["cp3402-project-team18"]
 
     # for when all groups are in file
-    # with open(FILENAME, "r") as groups_file:
-    #     groups_to_clear = [line.strip() for line in groups_file]
+    with open(FILENAME, "r") as groups_file:
+        groups_to_clear = [line.strip() for line in groups_file]
 
     for group in groups_to_clear:
         try:

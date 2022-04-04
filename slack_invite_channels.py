@@ -2,6 +2,7 @@
 Script to invite all students in class list file to the Slack channels for each subject they do
 Takes unedited XLS file from JCU StaffOnline (subject "CP%", study period "SP1 or 2"), download the file
 """
+import ssl
 import xlrd
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
@@ -30,7 +31,10 @@ def main():
         input("Are you sure you want to remove students?! Cancel program to stop now.")
 
     # make Slack API connection
-    client = WebClient(SLACK_AUTH_TOKEN)
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+    client = WebClient(token=SLACK_AUTH_TOKEN, ssl=ssl_context)
 
     # get all students and subjects they do
     print("Getting student data from file")
@@ -86,7 +90,7 @@ def main():
                             continue
                         print("ERROR inviting ({})\n".format(error))
                         print(error.response)
-                        input("Pausing")
+                        input("Pausing to learn what's going on")
                         # TODO: when get a 'ratelimited' error, figure out how to get response "Retry-After:"
                         # https://github.com/slackapi/python-slack-sdk/issues/436#issuecomment-499692624
                         # (old, but time/wait is relevant)

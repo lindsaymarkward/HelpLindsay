@@ -8,7 +8,8 @@ NOTE: This is probably defunct now (and would need updating for new Slack API)
 
 import csv
 from pprint import PrettyPrinter
-from slackclient import SlackClient
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
 
 from private import SLACK_AUTH_TOKEN
 from slack_functions import get_slack_channels_members, get_slack_users, PP
@@ -21,7 +22,7 @@ WILL_CREATE_CHANNELS = False
 
 
 def main():
-    client = SlackClient(SLACK_AUTH_TOKEN)
+    client = WebClient(SLACK_AUTH_TOKEN)
 
     # get all students and their channels
     channels_students = get_group_lists(STUDENT_FILE)
@@ -98,7 +99,7 @@ def run_tests():
     pp.pprint(student_details)
 
     # test getting Slack channels
-    client = SlackClient(SLACK_AUTH_TOKEN)
+    client = WebClient(SLACK_AUTH_TOKEN)
     slack_channels = get_slack_channels_members(client)
     pp.pprint(slack_channels)
 

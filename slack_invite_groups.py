@@ -7,21 +7,25 @@ Specify the email address for any staff to be added to all groups in the private
 """
 
 import csv
+import ssl
 from pprint import PrettyPrinter
 from slack_sdk import WebClient
 
 from private import SLACK_AUTH_TOKEN, STAFF_TO_ADD
 from slack_functions import get_slack_groups_members, get_slack_users
 
-STUDENT_FILE = "data/cp3402groupsnew.csv"
+STUDENT_FILE = "data/cp3402groups.csv"
 # STUDENT_FILE = "data/externals.csv"
 
-# Configuration: set whether or not to create groups if they're not present
+# Configuration: set whether to create groups if they're not present
 WILL_CREATE_GROUPS = False
 
 
 def main():
-    client = WebClient(SLACK_AUTH_TOKEN)
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+    client = WebClient(token=SLACK_AUTH_TOKEN, ssl=ssl_context)
     pp = PrettyPrinter(indent=4)
 
     # get all students and their groups (includes staff)
@@ -37,7 +41,7 @@ def main():
     print("Getting Slack group member details")
     group_details = get_slack_groups_members(client)
     print("Got {} Slack groups".format(len(group_details)))
-    # pp.pprint(group_details)
+    pp.pprint(group_details)
 
     missing_students = []
     invited_count = 0
