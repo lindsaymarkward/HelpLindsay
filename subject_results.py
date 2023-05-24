@@ -13,16 +13,19 @@ How To Use:
   Creating the CSVs from the final grades (using xlwings) is by far the slowest
   set WILL_CREATE_CSV to False to skip this step (and do it yourself in Excel)
 * Download LearnJCU Grade Centre file (xls extension but is actually a CSV) to DIRECTORY_DATA folder
-  Edit grade centre spreadsheet:
-    - leave only desired assessments, in desired order, with desired names
-    - replace the number/id after pipe | with assessment weighting, e.g., 20% = "Assignment 1 [Total Pts: 100 Score] |20"
+  Edit grade centre spreadsheet (save as CSV with same xls extension):
+    - if you have extra calculations to do in the sheet; probably best to copy from a master Excel file (paste values)
+    - leave ONLY desired assessments, in desired order, with desired names
+    - replace the id after pipe | with assessment weighting, e.g., 20% = "Assignment 1 [Total Pts: 100 Score] |20"
+Annoying text like "Ready to Post(" or anything with parentheses will be stripped out automatically
+
 * Put all related student class list CSV files in DIRECTORY_DATA
   That is, if your LearnJCU site is a merge of 3 subjects, you can include all 3 subjects to be processed at once :)
   The program will process each of the CSV files using the one LearnJCU Grade Centre file
   so do not have any other CSV files in this folder
 * Run
     Output files will go into DIRECTORY_OUTPUT_NAME folder,
-    Names will match class list CSV file names + "Results" - csv & xlsx
+    ***Names will match class list CSV file names + "Results" - csv & xlsx
 * Edit these to complete and confirm all is OK
   If you need to update small things, just do so and re-run to produce new output files
   Add your name to results sheet, other details should be automatic
@@ -31,6 +34,8 @@ How To Use:
 
 TODO: consider rewriting with numpy/pandas
 https://stackoverflow.com/questions/16503560/read-specific-columns-from-a-csv-file-with-csv-module
+# TODO update current assumption for campus
+# Assume filename format is like "CSV Report - Cairns_SpkCP1401Ver3-Results.xlsx"
 """
 import csv
 import os
@@ -63,9 +68,8 @@ COLUMN_CLASS_YEAR = 10
 COLUMN_CLASS_STUDY_PERIOD = 11
 COLUMN_CLASS_STUDENT_ID = 13  # N
 COLUMN_RESULTS_FIRST_ASSESSMENT = 5  # Numbered from 1 (openpyxl)
-COLUMN_RESULTS_FINAL_GRADE_LETTER = 'M'  # O for U/S/X grades in 2020-1, M for normal
+COLUMN_RESULTS_FINAL_GRADE_LETTER = 'M'  # O for U/S/X grades as in 2020-1, M for normal
 ROW_RESULTS_FIRST_STUDENT = 13
-TEXT_TO_REMOVE = "Reply to Post("  # Now handled for anything with parentheses
 
 
 def main():
@@ -92,8 +96,11 @@ def main():
 
     for class_list_filename in class_list_filenames:
         # create filenames
-        input_filename_base = class_list_filename.split('.')[0]  # no extension
-        output_filename_base = input_filename_base + "-Results"
+        # Example filename: 'CSV Report - Cairns_SpkCP1401Ver3-Results.xlsx'
+        relevant_parts = class_list_filename.split()[-1].split('_')
+        campus = relevant_parts[0]
+        subject_code = relevant_parts[1][3:9]
+        output_filename_base = f"{subject_code} {campus}"
 
         students_class_list = get_students(class_list_filename)
         print(f"Got {len(students_class_list)} students from {class_list_filename}")
@@ -106,7 +113,7 @@ def main():
             print("Trying with current data")
         print(f"Got {len(student_results)} students' results from {FILE_GRADE_CENTRE}")
 
-        write_results(student_results, students_class_list, assessments, output_filename_base + ".xlsx")
+        write_results(student_results, students_class_list, assessments, output_filename_base)
         print(f"Results spreadsheet created: {DIRECTORY_DATA}/{DIRECTORY_OUTPUT_NAME}/{output_filename_base}.xlsx")
         if WILL_CREATE_CSV:
             write_csv(output_filename_base)
@@ -163,7 +170,7 @@ def get_assessments(input_filename):
             weight = int(sub_parts[-1].strip('|'))
             assessments.append((first_assessment_index + i, title, score, weight))
         except IndexError:
-            raise RuntimeError(f"ERROR with format of {DIRECTORY_DATA}/{input_filename}")
+            raise RuntimeError(f"ERROR with column data/structure in {DIRECTORY_DATA}/{input_filename}")
     # Return both processed assessments and all rows (including headings)
     return assessments, rows
 
@@ -206,7 +213,7 @@ def get_student_results(student_grade_centre_rows, students, assessments):
     return student_results
 
 
-def write_results(student_results, class_list, assessments, output_filename):
+def write_results(student_results, class_list, assessments, output_filename_base):
     """Write student details and scores to results spreadsheet."""
 
     # Add student scores to results data sheet
@@ -217,13 +224,14 @@ def write_results(student_results, class_list, assessments, output_filename):
         current_row = ROW_CLASS_FIRST_STUDENT + i
         for j, value in enumerate(student, 1):
             sheet.cell(row=current_row, column=j, value=value)
-        # Write reference to grade using INDEX-MATCH so sorting results doesn't break formulas
-        reference_row = ROW_CLASS_FIRST_STUDENT + i
-        column_number_grade = openpyxl.utils.cell.column_index_from_string(COLUMN_RESULTS_FINAL_GRADE_LETTER)
-        # + 1 since csv/pyopenxl have different starting indexes
-        column_letter_id = openpyxl.utils.cell.get_column_letter(COLUMN_CLASS_STUDENT_ID + 1)
-        formula = f"=INDEX({SHEET_RESULTS}!A${ROW_RESULTS_FIRST_STUDENT}:Q$320,MATCH({column_letter_id}{reference_row},{SHEET_RESULTS}!B${ROW_RESULTS_FIRST_STUDENT}:B$320,0),{column_number_grade})"
-        sheet.cell(row=current_row, column=COLUMN_CLASS_STUDENT_ID + 3, value=formula)
+        # 2023 version: don't write formula; it's already there
+        # # Write reference to grade using INDEX-MATCH so sorting results doesn't break formulas
+        # reference_row = ROW_CLASS_FIRST_STUDENT + i
+        # column_number_grade = openpyxl.utils.cell.column_index_from_string(COLUMN_RESULTS_FINAL_GRADE_LETTER)
+        # # + 1 since csv/pyopenxl have different starting indexes
+        # column_letter_id = openpyxl.utils.cell.get_column_letter(COLUMN_CLASS_STUDENT_ID + 1)
+        # formula = f"=INDEX({SHEET_RESULTS}!A${ROW_RESULTS_FIRST_STUDENT}:Q$320,MATCH({column_letter_id}{reference_row},{SHEET_RESULTS}!B${ROW_RESULTS_FIRST_STUDENT}:B$320,0),{column_number_grade})"
+        # sheet.cell(row=current_row, column=COLUMN_CLASS_STUDENT_ID + 3, value=formula)
 
     # Add formulas to raw results sheet to refer to student ID and name
     sheet = workbook[SHEET_RESULTS]
@@ -234,17 +242,20 @@ def write_results(student_results, class_list, assessments, output_filename):
         sheet.cell(row=current_row, column=3, value=f"={SHEET_CLASS}!O{reference_row}")
 
     # Get and write subject information to Results
-    # Assume filename format is like "CP1404 TSV SP1 2021-Results.xlsx"
+    # See filename format in top CONSTANTS
     subject_name = class_list[0][COLUMN_CLASS_SUBJECT_NAME]
-    campus = output_filename.split()[1]
+    campus = output_filename_base.split()[1]  # Based on assumptions (see comments at top)
     subject_code = class_list[0][COLUMN_CLASS_SUBJECT_CODE]
     year = class_list[0][COLUMN_CLASS_YEAR]
     study_period = class_list[0][COLUMN_CLASS_STUDY_PERIOD]
     sheet.cell(row=1, column=3, value=subject_name)
     sheet.cell(row=2, column=3, value=campus)
-    sheet.cell(row=3, column=3, value=year)
-    sheet.cell(row=4, column=3, value=study_period)
-    sheet.cell(row=5, column=3, value=subject_code)
+    # row 3 is "Mode" - not in the CSV
+    sheet.cell(row=4, column=3, value=year)
+    sheet.cell(row=5, column=3, value=study_period)
+    sheet.cell(row=6, column=3, value=subject_code)  # but there's a formula already in the results sheet for this
+    # Update filename now that we know details
+    output_filename_base = f"{output_filename_base} {year} {study_period}-Results"
 
     # Add assessment headings
     # Assume spreadsheet structure is based on 13=ROW_FIRST_RAW_DATA, 10=%, 11=Out Of, 12=Title
@@ -275,13 +286,14 @@ def write_results(student_results, class_list, assessments, output_filename):
     for column_number in range(1, 20):  # About 16 columns - clear them all
         sheet.cell(row=current_row + 1, column=column_number, value="")
 
-    workbook.save(filename=f"{DIRECTORY_OUTPUT_NAME}/{output_filename}")
+    workbook.save(filename=f"{DIRECTORY_OUTPUT_NAME}/{output_filename_base}.xlsx")
 
 
 def write_csv(filename_base):
     """Write just CSV file needed for results submission."""
-    input_filename = filename_base + ".xlsx"
-    output_filename = filename_base + ".csv"
+    # TODO: fix this as filename has changed (2023)
+    input_filename = f"{filename_base}.xlsx"
+    output_filename = f"{filename_base}.csv"
     # openpyxl does not evaluate formulas, so use xlwings
     excel_app = xlwings.App(visible=False)
     excel_book = excel_app.books.open(f"{DIRECTORY_OUTPUT_NAME}/{input_filename}")

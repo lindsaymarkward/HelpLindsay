@@ -83,20 +83,11 @@ def collateData(students):
         login = filename[filename.rfind("-") + 1:filename.rfind(".")]
         student = students[login]
         print(student)
-        # add 'blank' lines between groups
-        # if student.group != groupCounter:
-        #     # destinationSheet.cell(row=rowCounter, column=1).value = "-"
-        #     rowCounter += 1
-
-        # groupCounter = student.group
-
         sheet = openpyxl.load_workbook(filename).active
-
         for i in range(FIRST_ROW, FIRST_ROW + MAX_GROUP_SIZE + 1):
             # exit loop if we've run out of data (group is smaller than MAX_GROUP_SIZE)
             if not sheet.rows[i][0].value:
                 break
-
             # print(sheet.rows[i][0].value)
             destinationSheet.cell(row=rowCounter, column=1).value = student.campus
             destinationSheet.cell(row=rowCounter, column=2).value = student.group

@@ -6,11 +6,12 @@ import ssl
 import xlrd
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
+from slack_sdk.http_retry.builtin_handlers import RateLimitErrorRetryHandler
 
 from private import SLACK_AUTH_TOKEN
 from slack_functions import get_slack_channels_members, get_slack_users, PP, get_slack_channels, remove_students
 
-DESIGN_THINKING_SUBJECTS = ["CP1403", "CP1803", "CP2408", "CP3405", "CP5641"]
+DESIGN_THINKING_SUBJECTS = ["CP1403", "CP2408", "CP3405", "CP5641"]
 SUBSTITUTIONS_FILE = 'data/subject_substitutions.txt'
 STUDENT_FILE = 'data/Classlist_Results.xls'
 STAFF_FILE = 'data/slack_staff.txt'
@@ -28,13 +29,17 @@ WILL_REMOVE_OLD_STUDENTS = False
 
 def main():
     if WILL_REMOVE_OLD_STUDENTS:
-        input("Are you sure you want to remove students?! Cancel program to stop now.")
+        input("Are you sure you want to remove students?! Cancel the program to stop now.")
 
     # make Slack API connection
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE
     client = WebClient(token=SLACK_AUTH_TOKEN, ssl=ssl_context)
+
+    # Enable rate limited error retries (https://slack.dev/python-slack-sdk/web/index.html#retryhandler)
+    rate_limit_handler = RateLimitErrorRetryHandler(max_retry_count=1)
+    client.retry_handlers.append(rate_limit_handler)
 
     # get all students and subjects they do
     print("Getting student data from file")
@@ -57,6 +62,7 @@ def main():
     if WILL_REMOVE_OLD_STUDENTS:
         print("Removing all students from subject channels")
         remove_students(client, channel_details, slack_user_details, STAFF_FILE)
+        input("Removed students. Press Enter to continue")
 
     substitutions = create_substitutions()
     missing_students = set()

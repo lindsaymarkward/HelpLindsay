@@ -14,7 +14,8 @@ from slack_sdk import WebClient
 from private import SLACK_AUTH_TOKEN, STAFF_TO_ADD
 from slack_functions import get_slack_groups_members, get_slack_users
 
-STUDENT_FILE = "data/cp3402groups.csv"
+# STUDENT_FILE = "data/cp3402groups.csv"
+STUDENT_FILE = "data/cp3402groupsnew.csv"
 # STUDENT_FILE = "data/externals.csv"
 
 # Configuration: set whether to create groups if they're not present

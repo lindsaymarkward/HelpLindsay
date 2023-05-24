@@ -175,6 +175,14 @@ def remove_students(client, all_channel_details, slack_user_details,
     staff_ids = set(values[0] for values in staff_details.values())
 
     for channel_name, channel_details in subject_channel_details.items():
+        # # Temporary (hack) - only remove from the following channels
+        # if channel_name not in ["cp1401", "cp1407"]:
+        #     continue
+
+        # # Temporary (hack) SP2 vs TR2 :( - Don't remove from the following channels
+        # if channel_name in ["cp1401", "cp1407", "cp1409", "cp3102", "cp508090", "cp5046", "cp50467"]:
+        #     continue
+
         channel_id = channel_details[0]
         channel_members = channel_details[1]
         count = 0
