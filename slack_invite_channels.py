@@ -1,6 +1,8 @@
 """
 Script to invite all students in class list file to the Slack channels for each subject they do
 Takes unedited XLS file from JCU StaffOnline (subject "CP%", study period "SP1 or 2"), download the file
+Note: for removing students from only specific channels, see
+
 """
 import ssl
 import xlrd
@@ -22,8 +24,11 @@ EXCEL_FIELD_SUBJECT = 11
 EXCEL_FIELD_COURSE_CAMPUS = 8
 EXCEL_FIELD_COURSE_MODE = 9  # course is external (not just subject)
 
-# customisation:
-# choose whether to remove all students from subject channels first
+# Customisation:
+# Choose whether to remove all students from subject channels first
+# For specific channels to remove students from (ONLY),
+# change data/channels_to_clear.txt
+# and update commented in/out slack_functions.py around where it says "Temporary (hack)"
 WILL_REMOVE_OLD_STUDENTS = False
 
 
@@ -62,7 +67,8 @@ def main():
     if WILL_REMOVE_OLD_STUDENTS:
         print("Removing all students from subject channels")
         remove_students(client, channel_details, slack_user_details, STAFF_FILE)
-        input("Removed students. Press Enter to continue")
+        # Hack: uncomment the next line if you ONLY want to remove students, so you can stop when it pauses for input.
+        # input("Removed students. Press Enter to continue")
 
     substitutions = create_substitutions()
     missing_students = set()

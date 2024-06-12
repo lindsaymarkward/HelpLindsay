@@ -95,11 +95,20 @@ def main():
     class_list_filenames = [filename for filename in os.listdir('.') if filename.lower().endswith(".csv")]
 
     for class_list_filename in class_list_filenames:
-        # create filenames
-        # Example filename: 'CSV Report - Cairns_SpkCP1401Ver3-Results.xlsx'
-        relevant_parts = class_list_filename.split()[-1].split('_')
-        campus = relevant_parts[0]
-        subject_code = relevant_parts[1][3:9]
+        # Create filenames
+        # TODO: Is there a way to standardise, or to determine the format from the existing name?
+
+        # Ver 1 - Example filename: 'CP3402 TSV SP1 2023.Csv'
+        # 2023-3- Example filename: 'CP1404 2023 CNS TR3.Csv'
+        relevant_parts = class_list_filename.split()
+        subject_code = relevant_parts[0]
+        campus = relevant_parts[1]  # This changes sometimes :(
+
+        # Ver 2 - Example filename: 'CSV Report - Cairns_SpkCP1401Ver3-Results.xlsx'
+        # relevant_parts = class_list_filename.split()[-1].split('_')
+        # campus = relevant_parts[0]
+        # subject_code = relevant_parts[1][3:9]
+
         output_filename_base = f"{subject_code} {campus}"
 
         students_class_list = get_students(class_list_filename)

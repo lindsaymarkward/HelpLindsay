@@ -10,7 +10,7 @@ from pprint import PrettyPrinter
 
 # from slack_invite_channels import STAFF_FILE
 STAFF_FILE = 'data/slack_staff.txt'
-
+CHANNELS_TO_CLEAR_FILENAME = 'data/channels_to_clear.txt'
 PP = PrettyPrinter(indent=4)  # used for testing and error messages
 
 
@@ -174,12 +174,18 @@ def remove_students(client, all_channel_details, slack_user_details,
     # get just the staff IDs into a set
     staff_ids = set(values[0] for values in staff_details.values())
 
+    # Temporary - only needed if clearing specific channels
+    # Get list of channels from file, in case we need it for removing only specific channels
+    # with open(CHANNELS_TO_CLEAR_FILENAME) as channels_file:
+    #     channels_to_clear = set([channel.strip() for channel in channels_file.readlines()])
+
     for channel_name, channel_details in subject_channel_details.items():
-        # # Temporary (hack) - only remove from the following channels
-        # if channel_name not in ["cp1401", "cp1407"]:
+        # Temporary (hack) - only remove from the following channels
+        # Comment out next two lines if clearing all
+        # if channel_name not in channels_to_clear:
         #     continue
 
-        # # Temporary (hack) SP2 vs TR2 :( - Don't remove from the following channels
+        # # Temporary (hack) (TR2, when doing SP2) - Don't remove from the following channels
         # if channel_name in ["cp1401", "cp1407", "cp1409", "cp3102", "cp508090", "cp5046", "cp50467"]:
         #     continue
 
@@ -229,9 +235,9 @@ def test_something():
     # users = get_slack_users(client)
     # print(len(users))
 
-    # channels_to_clear = ["externalcp1404", "externalcp3402"]
-    # clear_channels(sc, channels_to_clear)
-
+    channels_to_clear = ["cp1401"]
+    # clear_channels(client, channels_to_clear)
+    delete_all_messages()
     # users = get_slack_users(sc)
     # PP.pprint(users)
     # print(len(users), "users in workspace")

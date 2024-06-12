@@ -1,16 +1,17 @@
 """
 Program to clear groups by kicking out all members (except specified ones)
-and clearing the purpose of the groups
+and clearing the purpose of the groups.
+For private, assignment, groups, not subject channels.
 """
 import ssl
 
 from pprint import PrettyPrinter
 from slack_sdk import WebClient
 from private import SLACK_AUTH_TOKEN, members_to_keep
-from slack_functions import get_slack_groups_members, kick_members, rename_groups, delete_all_messages
+from slack_functions import get_slack_groups_members, get_slack_channels_members, kick_members, rename_groups, delete_all_messages
 
 FILENAME = "data/slackGroups.txt"
-# customisation for whether or not to archive groups
+# customisation for whether to archive groups
 ARCHIVE_GROUP = False
 
 
@@ -49,20 +50,24 @@ def main():
             print(repr(error))
 
 
-main()
-
-
 def rename():
     client = WebClient(SLACK_AUTH_TOKEN)
     rename_groups(client, "cp3402-2020", "cp3402-2021")
 
 
-# rename()
-
-
 def delete_messages():
-    client = WebClient(SLACK_AUTH_TOKEN)
-    group_details = get_slack_groups_members(client)
+    # make Slack API connection
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+    client = WebClient(token=SLACK_AUTH_TOKEN, ssl=ssl_context)
+    # For groups (not channels):
+    # group_details = get_slack_groups_members(client)
+    # with open("data/slackGroups.txt", "r") as groups_file:
+    #     groups_to_clear = [line.strip() for line in groups_file]
+
+    # For channels (not groups):
+    group_details = get_slack_channels_members(client)
     with open("data/slackGroups.txt", "r") as groups_file:
         groups_to_clear = [line.strip() for line in groups_file]
 
@@ -72,4 +77,5 @@ def delete_messages():
         delete_all_messages(client, group_id)
 
 
-# delete_messages()
+# main()
+delete_messages()

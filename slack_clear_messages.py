@@ -3,6 +3,8 @@
 Use slack-cleaner to clear all messages from all groups in the text file (one group name per line)
 Requires: https://github.com/kfei/slack-cleaner
 So: pip install slack-cleaner
+NOTE: Uses old version of package, and Python 2; probably doesn't work anymore
+Don't use this :)
 """
 from subprocess import call
 from private import SLACK_AUTH_TOKEN

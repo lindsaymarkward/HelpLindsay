@@ -2,9 +2,11 @@
 .idea/
 __pycache__/
 private.pyc
+adventofcode/
 testQuestions/
 data/
 output/
+temp/
 
 output/nonslackers_170310_invited.txt
 slackEmails.txt

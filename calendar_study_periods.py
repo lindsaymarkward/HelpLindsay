@@ -12,7 +12,7 @@ Updated for Trimesters, etc.
 from datetime import datetime, timedelta
 from icalendar import Calendar, Event
 
-FILE_NAME = "output/JCU_Weeks.ics"
+FILE_NAME = "output/JCU_Trimesters.ics"
 
 
 def main():
@@ -23,19 +23,20 @@ def main():
 
     # Customise the desired study periods in the string below
     # study_periods = ["SP1", "SP2"]
-    study_periods = ["SP1", "SP2", "TR1", "TR2", "TR3"]
+    study_periods = ["TR1", "TR2", "TR3"]
 
     for study_period in study_periods:
         # get required dates - week 1 and lecture recess; others are derived
         week_1_text = input(study_period + " Week 1 Monday Date (dd/mm/yy): ")
         week_1_date = datetime.strptime(week_1_text, "%d/%m/%y").date()
-        lecture_recess_text = input("Lecture Recess Monday Date (dd/mm/yy): ")
-        lecture_recess_date = datetime.strptime(lecture_recess_text, "%d/%m/%y").date()
-
+        # OLD - variable lecture recess date; now consistently after week 5
+        # lecture_recess_text = input("Lecture Recess Monday Date (dd/mm/yy): ")
+        # lecture_recess_date = datetime.strptime(lecture_recess_text, "%d/%m/%y").date()
+        lecture_recess_date = week_1_date + timedelta(weeks=5)
         # add O Week event (1 week before Week 1)
         event = Event()
         event.add('summary', f"{study_period} O Week")
-        event.add('dtstart', week_1_date - timedelta(days=7))
+        event.add('dtstart', week_1_date - timedelta(weeks=1))
         cal.add_component(event)
 
         # loop through all numbered weeks
@@ -54,13 +55,13 @@ def main():
             event.add('dtstart', week_date)
             cal.add_component(event)
             # add one week for next event
-            week_date += timedelta(days=7)
+            week_date += timedelta(weeks=1)
 
         # add swotvac and exams after final week
         event = Event()
         event.add('summary', f"{study_period} Swotvac")
         event.add('dtstart', week_date)
-        week_date += timedelta(days=7)
+        week_date += timedelta(weeks=1)
         cal.add_component(event)
 
         event = Event()
