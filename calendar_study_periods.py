@@ -4,16 +4,17 @@ makes a .ics file that can be imported into Calendar programs
 containing the weeks in a single study period,
 including Lecture Recess (specified), O week, swotvac and exams
 Uses icalendar package - https://pypi.python.org/pypi/icalendar
+TRANSPARENT sets the event to be transparent
+Updated for Trimesters, etc.
 Lindsay Ward, JCU
 Started 11/12/2015
-Updated for Trimesters, etc.
 """
 
 from datetime import datetime, timedelta
 from icalendar import Calendar, Event
 
 FILE_NAME = "output/JCU_Trimesters.ics"
-
+WEEKS_IN_STUDY_PERIOD = 10
 
 def main():
     """Create a single calendar with study period dates."""
@@ -22,54 +23,59 @@ def main():
     cal = Calendar()
 
     # Customise the desired study periods in the string below
-    # study_periods = ["SP1", "SP2"]
     study_periods = ["TR1", "TR2", "TR3"]
 
     for study_period in study_periods:
-        # get required dates - week 1 and lecture recess; others are derived
+        # Get required date - week 1; others are derived
         week_1_text = input(study_period + " Week 1 Monday Date (dd/mm/yy): ")
         week_1_date = datetime.strptime(week_1_text, "%d/%m/%y").date()
-        # OLD - variable lecture recess date; now consistently after week 5
-        # lecture_recess_text = input("Lecture Recess Monday Date (dd/mm/yy): ")
-        # lecture_recess_date = datetime.strptime(lecture_recess_text, "%d/%m/%y").date()
+        # Lecture recess is now consistently after week 5
         lecture_recess_date = week_1_date + timedelta(weeks=5)
-        # add O Week event (1 week before Week 1)
+        # Add O Week event (1 week before Week 1)
         event = Event()
         event.add('summary', f"{study_period} O Week")
         event.add('dtstart', week_1_date - timedelta(weeks=1))
+        event.add('transp', 'TRANSPARENT')
         cal.add_component(event)
 
-        # loop through all numbered weeks
+        # Loop through all numbered weeks
         week_date = week_1_date
-        weeks_in_study_period = 10 if study_period.startswith("TR") else 13
         week_number = 1
-        for _ in range(weeks_in_study_period + 1):
+        for _ in range(WEEKS_IN_STUDY_PERIOD + 1):
             event = Event()
-            # handle lecture recess, not incrementing week number
+            # Handle lecture recess, don't increment week number
             if week_date == lecture_recess_date:
                 event.add('summary', f"{study_period} Lecture Recess")
             else:
-                event.add('summary', f"{study_period} Week {str(week_number)}")
+                event.add('summary', f"{study_period} Week {week_number}")
                 week_number += 1
 
             event.add('dtstart', week_date)
+            event.add('transp', 'TRANSPARENT')
             cal.add_component(event)
-            # add one week for next event
+            # Add one week for next event
             week_date += timedelta(weeks=1)
 
-        # add swotvac and exams after final week
+            # Handle TR2 having a 2-week lecture recess
+            if study_period == "TR2":
+                lecture_recess_date = week_date
+
+        # Add swotvac and exams after final week
         event = Event()
         event.add('summary', f"{study_period} Swotvac")
         event.add('dtstart', week_date)
+        event.add('transp', 'TRANSPARENT')
         week_date += timedelta(weeks=1)
         cal.add_component(event)
 
         event = Event()
         event.add('summary', f"{study_period} Exams")
         event.add('dtstart', week_date)
+        event.add('transp', 'TRANSPARENT')
         cal.add_component(event)
 
-    # write calendar file to disk (open the file to add events to Calendar program)
+    # Write calendar file to disk
+    # User should open the file to import events to Calendar program
     with open(FILE_NAME, 'wb') as calendar_file:
         calendar_file.write(cal.to_ical())
 
