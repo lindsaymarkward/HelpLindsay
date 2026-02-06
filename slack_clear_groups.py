@@ -2,6 +2,7 @@
 Program to clear groups by kicking out all members (except specified ones)
 and clearing the purpose of the groups.
 For private, assignment, groups, not subject channels.
+For removing from subject channels, use the normal "invite_channels" script and set the CONSTANT to True
 """
 import ssl
 
@@ -26,7 +27,8 @@ def main():
     # TODO: would be more helpful if members_to_keep was specified as emails or Slack usernames instead of Slack IDs
 
     group_details = get_slack_groups_members(client)
-    # pp.pprint(group_details)
+    pp.pprint(group_details)
+    input("Pausing...")
 
     # for testing a small number, not all in file:
     # groups_to_clear = ["cp3402-project-team18"]
@@ -77,5 +79,5 @@ def delete_messages():
         delete_all_messages(client, group_id)
 
 
-# main()
-delete_messages()
+main()
+# delete_messages()

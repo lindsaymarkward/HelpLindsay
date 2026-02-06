@@ -1,7 +1,7 @@
 """Display order of code review pull requests for CP1404."""
 import re
 
-USERNAMES_FILENAME = "data/github_usernames_a_tsv.txt"
+USERNAMES_FILENAME = "data/github_usernames_b.txt"
 OUTPUT_FILENAME = "output/code_reviews.md"
 FIRST_PRAC = 5  # 5 at start of study period
 LAST_PRAC = 9

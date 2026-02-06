@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 
 # START_PATH = '/Users/sci-lmw1/Downloads/temp'  # For testing
-START_PATH = '/Users/sci-lmw1/Library/CloudStorage/OneDrive-AnnandaleChristianCollege/Board/Board Meetings/2024'
+START_PATH = '/Users/sci-lmw1/Library/CloudStorage/OneDrive-SharedLibraries-AnnandaleChristianCollege/Peter Hartin - Board/Meetings/2026'
 
 # Create folder names for the year
 current_year = datetime.now().year

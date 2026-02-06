@@ -2,8 +2,9 @@
 Script to invite all students in class list file to the Slack channels for each subject they do
 Takes unedited XLS file from JCU StaffOnline (subject "CP%", study period "SP1 or 2"), download the file
 Note: for removing students from only specific channels, see
-
+TODO: Find out why, and fix, always inviting tsv students to Townsville - check first?
 """
+import csv
 import ssl
 import xlrd
 from slack_sdk import WebClient
@@ -15,7 +16,7 @@ from slack_functions import get_slack_channels_members, get_slack_users, PP, get
 
 DESIGN_THINKING_SUBJECTS = ["CP1403", "CP2408", "CP3405", "CP5641"]
 SUBSTITUTIONS_FILE = 'data/subject_substitutions.txt'
-STUDENT_FILE = 'data/Classlist_Results.xls'
+STUDENT_FILE = 'data/Classlist_Results-26-TR1-2.csv'
 STAFF_FILE = 'data/slack_staff.txt'
 NONSLACKERS_FILE = "output/nonslackers.txt"
 EXCEL_FIELD_FIRST_NAME = 2
@@ -48,15 +49,15 @@ def main():
 
     # get all students and subjects they do
     print("Getting student data from file")
-    student_details, all_subjects = get_student_data(STUDENT_FILE)
+    student_details, all_subjects = get_student_data_from_csv(STUDENT_FILE)
     # PP.pprint(student_details)
-    print("Got {} students".format(len(student_details)))
-
+    print(f"Got {len(student_details)} students")
+    # input("STOP")
     # get users from Slack like {email: (id, username, real name)}
     print("Getting current Slack user data from workspace")
     slack_user_details = get_slack_users(client)
     # PP.pprint(slack_user_details)
-    print("Got {} Slack users".format(len(slack_user_details)))
+    print(f"Got {len(slack_user_details)} Slack users")
 
     # get channels like {channel name: (id, [members])}
     print("Getting Slack channel member details")
@@ -148,7 +149,51 @@ def subject_to_channel(subject, substitutions):
     return subject.lower()
 
 
-def get_student_data(filename=STUDENT_FILE):
+def get_student_data_from_csv(filename=STUDENT_FILE):
+    """
+    Read CSV file exported from JCU StaffOnline and get all students and their subjects
+    :param filename: name of class list file to read
+    :return: dictionary of {email: set(subjects)} (subjects includes "external" if their course is external)
+             and a set of all subjects
+    """
+    infile = open(filename, 'r')
+    reader = csv.reader(infile)
+    students = {}
+    all_subjects = set()
+    # Map student emails to list of subjects in a dictionary (campus doesn't matter)
+    # First row is header, last row is a normal value
+    next(reader)  # Skip first row
+    for row in reader:
+        # print(row)
+        email = row[EXCEL_FIELD_EMAIL]
+        subject = row[EXCEL_FIELD_SUBJECT]
+        campus = row[EXCEL_FIELD_COURSE_CAMPUS]
+        # Build set of unique subjects
+        all_subjects.add(subject)
+
+        # Update existing student's subjects set, or add student to dictionary if not already there
+        try:
+            students[email].add(subject)
+        except KeyError:
+            students[email] = {subject}  # creates set with one value
+
+        # add "external" as subject for any students whose course is external
+        if row[EXCEL_FIELD_COURSE_MODE] == "EXT" or campus == "ONL":
+            students[email].add("external")
+        else:
+            # add internal students to their campus
+            if campus == "TSV":
+                students[email].add("townsville")
+            elif campus == "CNS":
+                students[email].add("cairns")
+            # add "sprint" channel for students in Design Thinking subjects
+            if subject in DESIGN_THINKING_SUBJECTS:
+                students[email].add("sprint")
+    infile.close()
+    return students, all_subjects
+
+
+def get_student_data_from_xls(filename=STUDENT_FILE):
     """
     Read Excel (XLSX) file exported from JCU StaffOnline and get all students and their subjects
     :param filename: name of class list file to read
@@ -213,7 +258,7 @@ def check_channels():
 
 def test_get_students():
     # get all students and subjects they do
-    student_details, all_subjects = get_student_data(STUDENT_FILE)
+    student_details, all_subjects = get_student_data_from_xls(STUDENT_FILE)
     PP.pprint(student_details)
 
 

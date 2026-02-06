@@ -107,7 +107,7 @@ def get_group_lists(filename):
     """
     # map groups to set of emails
     groups_of_students = {}
-    input_file = open(filename, 'r')
+    input_file = open(filename, 'r', encoding="utf-8-sig")
     csv_reader = csv.reader(input_file)
     # get header row in lowercase
     header = [column.lower() for column in next(csv_reader, None)]

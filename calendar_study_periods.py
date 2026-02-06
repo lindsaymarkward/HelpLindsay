@@ -1,11 +1,10 @@
 """
 Calendar (iCalendar format) file maker for JCU Study Periods
 makes a .ics file that can be imported into Calendar programs
-containing the weeks in a single study period,
-including Lecture Recess (specified), O week, swotvac and exams
+containing the study period weeks, including Lecture Recess (specified), O week, swotvac and exams
 Uses icalendar package - https://pypi.python.org/pypi/icalendar
-TRANSPARENT sets the event to be transparent
-Updated for Trimesters, etc.
+TRANSPARENT sets the event to be transparent so that events do not block out calendar as busy
+Updated for Trimesters, TR2 having 2-week lecture recess, etc.
 Lindsay Ward, JCU
 Started 11/12/2015
 """
@@ -15,6 +14,7 @@ from icalendar import Calendar, Event
 
 FILE_NAME = "output/JCU_Trimesters.ics"
 WEEKS_IN_STUDY_PERIOD = 10
+
 
 def main():
     """Create a single calendar with study period dates."""
@@ -35,7 +35,7 @@ def main():
         event = Event()
         event.add('summary', f"{study_period} O Week")
         event.add('dtstart', week_1_date - timedelta(weeks=1))
-        event.add('transp', 'TRANSPARENT')
+        event.add('transp', 'TRANSPARENT')  # So event does not show as 'busy'
         cal.add_component(event)
 
         # Loop through all numbered weeks
@@ -46,6 +46,16 @@ def main():
             # Handle lecture recess, don't increment week number
             if week_date == lecture_recess_date:
                 event.add('summary', f"{study_period} Lecture Recess")
+
+                # Handle TR2 having a 2-week lecture recess, adding an extra event
+                if study_period == "TR2":
+                    lecture_recess_date = week_date
+                    event.add('dtstart', week_date)
+                    event.add('transp', 'TRANSPARENT')
+                    cal.add_component(event)
+                    week_date += timedelta(weeks=1)
+                    event = Event()
+                    event.add('summary', f"{study_period} Lecture Recess")
             else:
                 event.add('summary', f"{study_period} Week {week_number}")
                 week_number += 1
@@ -55,10 +65,6 @@ def main():
             cal.add_component(event)
             # Add one week for next event
             week_date += timedelta(weeks=1)
-
-            # Handle TR2 having a 2-week lecture recess
-            if study_period == "TR2":
-                lecture_recess_date = week_date
 
         # Add swotvac and exams after final week
         event = Event()
@@ -78,6 +84,7 @@ def main():
     # User should open the file to import events to Calendar program
     with open(FILE_NAME, 'wb') as calendar_file:
         calendar_file.write(cal.to_ical())
+    print(f"Calendar file saved to {FILE_NAME}")
 
 
 main()

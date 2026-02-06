@@ -77,7 +77,7 @@ def get_subjects():
 def get_prerequisite_block(text):
     index_start = text.find(PRE_REQ_START_STRING)
     if index_start == -1:  # TODO: Rewrite with walrus operator? :=
-        return "None"
+        return "None"  # Not NoneType
     index_end = text.find("</tr>", index_start)
     section = text[index_start + len(PRE_REQ_START_STRING):index_end].strip().strip("<td>").strip("</td>")
     return section

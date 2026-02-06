@@ -50,6 +50,7 @@ DIRECTORY_DATA = 'data/subject_results'
 DIRECTORY_OUTPUT_NAME = 'output'
 FILE_RESULTS_BLANK = 'Blank-Results.xlsx'
 FILE_GRADE_CENTRE = 'learnjcu_grade_centre.xls'
+FILE_GRADE_CENTRE = 'learnjcu_grade_centre.txt'  # Save sheet as UTF-16 encoded tab-delimited
 
 # Internal constants that might change if spreadsheet structure changes
 # Some row and column values are magic numbers; could be extracted as constants in future
