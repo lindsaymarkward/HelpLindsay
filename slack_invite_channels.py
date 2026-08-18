@@ -1,7 +1,8 @@
 """
 Script to invite all students in class list file to the Slack channels for each subject they do
-Takes unedited XLS file from JCU StaffOnline (subject "CP%", study period "SP1 or 2"), download the file
-Note: for removing students from only specific channels, see
+Takes unedited CSV file from JCU StaffOnline (subject "CP%", study period "SP1 or 2"), download the file
+(OLD StaffOnline produced an XLS file; previous function get_student_data_from_xls exists.)
+(Note: for removing students from only specific channels, see _channels_specific.py)
 TODO: Find out why, and fix, always inviting tsv students to Townsville - check first?
 """
 import csv
@@ -16,7 +17,7 @@ from slack_functions import get_slack_channels_members, get_slack_users, PP, get
 
 DESIGN_THINKING_SUBJECTS = ["CP1403", "CP2408", "CP3405", "CP5641"]
 SUBSTITUTIONS_FILE = 'data/subject_substitutions.txt'
-STUDENT_FILE = 'data/Classlist_Results-26-TR1-2.csv'
+STUDENT_FILE = 'data/Classlist_Results-26-TR2.csv'
 STAFF_FILE = 'data/slack_staff.txt'
 NONSLACKERS_FILE = "output/nonslackers.txt"
 EXCEL_FIELD_FIRST_NAME = 2
@@ -77,21 +78,23 @@ def main():
     invited_count = 0
     # now we can find students not in their subject channels
     # TODO: (one day) You can add multiple users at once, so determine first who to add
+    # Per-student loop
     for email, subjects in student_details.items():
+        # print("Student: ", email, subjects)
         try:
             slack_id = slack_user_details[email][0]
         except KeyError:
             missing_students.add(email)
             continue
         for subject in subjects:
-            channel_name = subject_to_channel(subject, substitutions)
+            channel_name = convert_subject_to_channel(subject, substitutions)
             try:
                 channel_id = channel_details[channel_name][0]
                 members = channel_details[channel_name][1]
                 # print(email, slack_id, channel_name)
                 # PP.pprint(channel_details[channel_name])
                 if slack_id not in members:
-                    print("Inviting {} to {}".format(email, channel_name))
+                    print(f"Inviting {email} to {channel_name}")
                     invited_count += 1
                     try:
                         response = client.conversations_invite(channel=channel_id, users=[slack_id])
@@ -101,22 +104,25 @@ def main():
                         if error.response['error'] == "channel_not_found":
                             missing_channels.add(channel_name)
                             continue
-                        print("ERROR inviting ({})\n".format(error))
+                        print(f"ERROR inviting. ({error})\n")
                         print(error.response)
-                        input("Pausing to learn what's going on")
+                        # input("Pausing to learn what's going on")
                         # TODO: when get a 'ratelimited' error, figure out how to get response "Retry-After:"
                         # https://github.com/slackapi/python-slack-sdk/issues/436#issuecomment-499692624
                         # (old, but time/wait is relevant)
+                else:
+                    # Debug
+                    print(f"{email} is already in {channel_name}")
             except Exception as error:
-                print("ERROR with {} lookup ({})\n".format(channel_name, error))
+                print(f"ERROR with {channel_name} lookup ({error})\n")
+                missing_channels.add(channel_name)
 
-    print("Invited people {} times".format(invited_count))
-    print("\n{} people not in Slack:\n{}".format(len(missing_students),
-                                                 ", ".join(missing_students)))
-    # output text file with missing students
-    # in form ready for bulk Slack invite (comma separated)
-    with open(NONSLACKERS_FILE, "w") as f:
-        f.write(", ".join(missing_students))
+    print(f"Invited people {invited_count} times\n")
+    print(f"{len(missing_students)} people not in Slack:")
+    # print(", ".join(missing_students))
+    # Output text file with missing students in form ready for bulk Slack invite (comma separated)
+    with open(NONSLACKERS_FILE, "w") as outfile:
+        outfile.write(", ".join(missing_students))
     if missing_channels:
         print("\nProblem (probably missing) channels: {}\n".format(
             "\n".join(missing_channels)))
@@ -125,24 +131,22 @@ def main():
 def create_substitutions(filename=SUBSTITUTIONS_FILE):
     """Create dictionary of subject -> channel substitutions from file."""
     substitutions = {}
-    with open(filename) as f:
-        for line in f:
+    with open(filename) as infile:
+        for line in infile:
             subject, subject_channel = line.split()
             substitutions[subject] = subject_channel
     return substitutions
 
 
-def subject_to_channel(subject, substitutions):
+def convert_subject_to_channel(subject, substitutions):
     """
     Convert subject to Slack channel name, including substituting for shared channels
     :param substitutions:
-    :param subject: original subject name to convert, e.g. "CP1804"
-    :return: Slack channel name, e.g. "cp1404"
+    :param subject: original subject name to convert, e.g., "CP5639"
+    :return: Slack channel name, e.g. "cp1401"
     """
-    # replace piggyback/diploma subject codes with channel names
-    if subject.startswith("CP18"):
-        subject = "CP14" + subject[4:]
-    elif subject.startswith("CP4"):
+    # replace piggyback subject codes with channel names
+    if subject.startswith("CP4"):
         subject = "honours"
     elif subject in substitutions:
         subject = substitutions[subject]
@@ -158,7 +162,7 @@ def get_student_data_from_csv(filename=STUDENT_FILE):
     """
     infile = open(filename, 'r')
     reader = csv.reader(infile)
-    students = {}
+    email_to_subjects = {}
     all_subjects = set()
     # Map student emails to list of subjects in a dictionary (campus doesn't matter)
     # First row is header, last row is a normal value
@@ -173,24 +177,24 @@ def get_student_data_from_csv(filename=STUDENT_FILE):
 
         # Update existing student's subjects set, or add student to dictionary if not already there
         try:
-            students[email].add(subject)
+            email_to_subjects[email].add(subject)
         except KeyError:
-            students[email] = {subject}  # creates set with one value
+            email_to_subjects[email] = {subject}  # create set with one value
 
         # add "external" as subject for any students whose course is external
-        if row[EXCEL_FIELD_COURSE_MODE] == "EXT" or campus == "ONL":
-            students[email].add("external")
-        else:
-            # add internal students to their campus
-            if campus == "TSV":
-                students[email].add("townsville")
-            elif campus == "CNS":
-                students[email].add("cairns")
-            # add "sprint" channel for students in Design Thinking subjects
-            if subject in DESIGN_THINKING_SUBJECTS:
-                students[email].add("sprint")
+        # if row[EXCEL_FIELD_COURSE_MODE] == "EXT" or campus == "ONL":
+        #     email_to_subjects[email].add("external")
+        # else:
+        #     # add internal students to their campus
+        #     if campus == "TSV":
+        #         email_to_subjects[email].add("townsville")
+        #     elif campus == "CNS":
+        #         email_to_subjects[email].add("cairns")
+        #     # add "sprint" channel for students in Design Thinking subjects
+        #     if subject in DESIGN_THINKING_SUBJECTS:
+        #         email_to_subjects[email].add("sprint")
     infile.close()
-    return students, all_subjects
+    return email_to_subjects, all_subjects
 
 
 def get_student_data_from_xls(filename=STUDENT_FILE):
@@ -251,7 +255,7 @@ def check_channels():
     with open("data/subjects.txt") as f:
         for line in f:
             subject_name = line[:6]
-            channel = subject_to_channel(subject_name, substitutions)
+            channel = convert_subject_to_channel(subject_name, substitutions)
             if channel not in channel_details:
                 print("ERROR", channel)
 
