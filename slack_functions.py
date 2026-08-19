@@ -58,22 +58,46 @@ def get_slack_channels(client):
     :return: dictionary of {channel name: id}
     """
     name_to_id = {}
-    response = client.conversations_list()
-    # PP.pprint(response)
-    channels = response['channels']
+    channels = []
+    next_cursor = ""
+    # get all channels using pagination - conversations_list only returns up to `limit`
+    # channels per call (default 100), so a single call can silently miss channels
+    # once the workspace has more than that
+    more_channels = True
+    while more_channels:
+        response = client.conversations_list(limit=500, cursor=next_cursor)
+        # PP.pprint(response)
+        try:
+            channels += response['channels']
+            next_cursor = response['response_metadata']['next_cursor']
+            if not next_cursor:
+                more_channels = False
+        except KeyError:
+            more_channels = False
+
     for channel in channels:
         name_to_id[channel['name']] = channel['id']
     return name_to_id
 
 
-def get_slack_channels_members(client):
+def get_slack_channels_members(client, channel_names=None):
     """
-    Get all channels from Slack team as well as their members
+    Get channels from Slack team as well as their members
     :param client: SlackClient API object setup for a particular Slack team
+    :param channel_names: optional iterable of channel names to restrict results to
+                           (case-insensitive). Pass this whenever you only care about a
+                           known subset of channels (e.g. this run's subject channels) -
+                           it avoids calling conversations_members for every channel in
+                           the workspace, which is often most of the API calls this
+                           function makes. Leave as None to fetch every channel (slower).
     :return: dictionary of {channel name: (id, [members])}
     """
     channel_details = {}
     channels = get_slack_channels(client)
+    if channel_names is not None:
+        wanted_names = {name.lower() for name in channel_names}
+        channels = {name: slack_id for name, slack_id in channels.items()
+                    if name.lower() in wanted_names}
     # for each channel, get its members and store them in the details dictionary
     for name, slack_id in channels.items():
         response = client.conversations_members(channel=slack_id, limit=999)
@@ -86,6 +110,44 @@ def get_slack_channels_members(client):
             print("Ignoring empty/archived channel: {}".format(name))
             # PP.pprint(response)
     return channel_details
+
+
+def invite_users_to_channel(client, channel_id, user_ids, channel_name="", batch_size=100):
+    """
+    Invite a list/set of users to a channel, batching calls to conversations.invite.
+    Slack allows up to 100 user ids per call, so this replaces what would otherwise be
+    one API call per student with roughly (number of users / 100) calls per channel.
+    Uses force=True so a single already-in-channel/ineligible user in a batch doesn't
+    stop the rest of that batch being invited (without force=True, one bad id fails the
+    whole call - see https://api.slack.com/methods/conversations.invite).
+    :param client: SlackClient API object setup for a particular Slack team
+    :param channel_id: Slack id of the channel to invite to
+    :param user_ids: list/set of Slack user ids to invite
+    :param channel_name: optional, only used to make log messages clearer
+    :param batch_size: max users per API call (Slack's current limit is 100)
+    :return: (invited_count, errors) - invited_count is how many were actually invited;
+             errors is a list of (user_id, reason) tuples for anyone force=True skipped.
+             A whole-batch failure (e.g. channel_not_found) raises SlackApiError - let
+             the caller decide how to handle that (e.g. treat the channel as missing).
+    """
+    user_ids = list(user_ids)
+    invited_count = 0
+    errors = []
+    for i in range(0, len(user_ids), batch_size):
+        batch = user_ids[i:i + batch_size]
+        response = client.conversations_invite(channel=channel_id, users=batch, force=True)
+        # even with force=True, some users in the batch may not have been invited -
+        # Slack reports those individually rather than failing the whole call
+        failed = {err['user']: err['error'] for err in response.get('errors', [])}
+        for user_id in batch:
+            if user_id in failed:
+                errors.append((user_id, failed[user_id]))
+            else:
+                invited_count += 1
+    if errors:
+        print("  {} user(s) not invited to {}: {}".format(
+            len(errors), channel_name or channel_id, errors))
+    return invited_count, errors
 
 
 def get_slack_groups_members(client):

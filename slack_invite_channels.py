@@ -6,14 +6,16 @@ Takes unedited CSV file from JCU StaffOnline (subject "CP%", study period "SP1 o
 TODO: Find out why, and fix, always inviting tsv students to Townsville - check first?
 """
 import csv
-import ssl
+from collections import defaultdict
+
 import xlrd
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from slack_sdk.http_retry.builtin_handlers import RateLimitErrorRetryHandler
 
 from private import SLACK_AUTH_TOKEN
-from slack_functions import get_slack_channels_members, get_slack_users, PP, get_slack_channels, remove_students
+from slack_functions import (get_slack_channels_members, get_slack_users, PP,
+                             get_slack_channels, remove_students, invite_users_to_channel)
 
 DESIGN_THINKING_SUBJECTS = ["CP1403", "CP2408", "CP3405", "CP5641"]
 SUBSTITUTIONS_FILE = 'data/subject_substitutions.txt'
@@ -39,13 +41,16 @@ def main():
         input("Are you sure you want to remove students?! Cancel the program to stop now.")
 
     # make Slack API connection
-    ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
-    client = WebClient(token=SLACK_AUTH_TOKEN, ssl=ssl_context)
+    # NOTE: previously this disabled SSL certificate verification (ssl.CERT_NONE), which
+    # left the connection carrying your Slack token open to man-in-the-middle interception.
+    # If you were doing that to work around SSL errors, run `pip install --upgrade certifi`
+    # instead of disabling verification.
+    client = WebClient(token=SLACK_AUTH_TOKEN)
 
     # Enable rate limited error retries (https://slack.dev/python-slack-sdk/web/index.html#retryhandler)
-    rate_limit_handler = RateLimitErrorRetryHandler(max_retry_count=1)
+    # max_retry_count raised from 1 to 3 - the SDK already backs off using Slack's
+    # Retry-After header, and a run doing many API calls benefits from a bit more headroom.
+    rate_limit_handler = RateLimitErrorRetryHandler(max_retry_count=3)
     client.retry_handlers.append(rate_limit_handler)
 
     # get all students and subjects they do
@@ -60,9 +65,20 @@ def main():
     # PP.pprint(slack_user_details)
     print(f"Got {len(slack_user_details)} Slack users")
 
+    substitutions = create_substitutions()
+    # work out up front which channels this run could possibly need, so we don't fetch
+    # membership for every channel in the workspace (announcements, admin channels, etc.)
+    needed_channels = {convert_subject_to_channel(subject, substitutions)
+                       for subject in all_subjects}
+
     # get channels like {channel name: (id, [members])}
     print("Getting Slack channel member details")
-    channel_details = get_slack_channels_members(client)
+    if WILL_REMOVE_OLD_STUDENTS:
+        # remove_students() filters by its own "cp*" + extras rule, so it needs the
+        # full channel list rather than just this run's subject channels
+        channel_details = get_slack_channels_members(client)
+    else:
+        channel_details = get_slack_channels_members(client, channel_names=needed_channels)
     # PP.pprint(channel_details)
 
     # optionally, clear out non-enrolled students
@@ -72,15 +88,15 @@ def main():
         # Hack: uncomment the next line if you ONLY want to remove students, so you can stop when it pauses for input.
         # input("Removed students. Press Enter to continue")
 
-    substitutions = create_substitutions()
     missing_students = set()
     missing_channels = set()
     invited_count = 0
-    # now we can find students not in their subject channels
-    # TODO: (one day) You can add multiple users at once, so determine first who to add
-    # Per-student loop
+
+    # Pass 1: work out who needs inviting where, grouped by channel (not one API call
+    # per student - a set also naturally de-duplicates students whose subjects share a
+    # channel, e.g. via substitutions)
+    invites_by_channel = defaultdict(set)
     for email, subjects in student_details.items():
-        # print("Student: ", email, subjects)
         try:
             slack_id = slack_user_details[email][0]
         except KeyError:
@@ -88,34 +104,36 @@ def main():
             continue
         for subject in subjects:
             channel_name = convert_subject_to_channel(subject, substitutions)
-            try:
-                channel_id = channel_details[channel_name][0]
-                members = channel_details[channel_name][1]
-                # print(email, slack_id, channel_name)
-                # PP.pprint(channel_details[channel_name])
-                if slack_id not in members:
-                    print(f"Inviting {email} to {channel_name}")
-                    invited_count += 1
-                    try:
-                        response = client.conversations_invite(channel=channel_id, users=[slack_id])
-                    except SlackApiError as error:
-                        if error.response['error'] == 'already_in_channel':
-                            continue
-                        if error.response['error'] == "channel_not_found":
-                            missing_channels.add(channel_name)
-                            continue
-                        print(f"ERROR inviting. ({error})\n")
-                        print(error.response)
-                        # input("Pausing to learn what's going on")
-                        # TODO: when get a 'ratelimited' error, figure out how to get response "Retry-After:"
-                        # https://github.com/slackapi/python-slack-sdk/issues/436#issuecomment-499692624
-                        # (old, but time/wait is relevant)
-                else:
-                    # Debug
-                    print(f"{email} is already in {channel_name}")
-            except Exception as error:
-                print(f"ERROR with {channel_name} lookup ({error})\n")
+            channel_entry = channel_details.get(channel_name)
+            if channel_entry is None:
                 missing_channels.add(channel_name)
+                continue
+            _channel_id, members = channel_entry
+            if slack_id in members:
+                # Debug
+                # print(f"{email} is already in {channel_name}")
+                continue
+            invites_by_channel[channel_name].add(slack_id)
+
+    # Pass 2: invite everyone in batches of up to 100 per channel (Slack's limit for
+    # conversations.invite), instead of one call per student per subject
+    for channel_name, user_ids in invites_by_channel.items():
+        channel_id = channel_details[channel_name][0]
+        print(f"Inviting {len(user_ids)} student(s) to {channel_name}")
+        try:
+            count, errors = invite_users_to_channel(
+                client, channel_id, user_ids, channel_name=channel_name)
+            invited_count += count
+            for user_id, reason in errors:
+                if reason != 'already_in_channel':
+                    print(f"  Could not invite {user_id} to {channel_name}: {reason}")
+        except SlackApiError as error:
+            error_code = error.response.get('error') if error.response else str(error)
+            if error_code == 'channel_not_found':
+                missing_channels.add(channel_name)
+            else:
+                print(f"ERROR inviting batch to {channel_name}: ({error})\n")
+                print(error.response)
 
     print(f"Invited people {invited_count} times\n")
     print(f"{len(missing_students)} people not in Slack:")
