@@ -3,12 +3,13 @@ Script to invite all students in class list file to the Slack channels for each 
 Takes unedited CSV file from JCU StaffOnline (subject "CP%", study period "SP1 or 2"), download the file
 (OLD StaffOnline produced an XLS file; previous function get_student_data_from_xls exists.)
 (Note: for removing students from only specific channels, see _channels_specific.py)
-TODO: Find out why, and fix, always inviting tsv students to Townsville - check first?
 """
-import csv
-from collections import defaultdict
 
+import certifi
+import csv
+import ssl
 import xlrd
+from collections import defaultdict
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from slack_sdk.http_retry.builtin_handlers import RateLimitErrorRetryHandler
@@ -19,7 +20,7 @@ from slack_functions import (get_slack_channels_members, get_slack_users, PP,
 
 DESIGN_THINKING_SUBJECTS = ["CP1403", "CP2408", "CP3405", "CP5641"]
 SUBSTITUTIONS_FILE = 'data/subject_substitutions.txt'
-STUDENT_FILE = 'data/Classlist_Results-26-TR2.csv'
+STUDENT_FILE = 'data/Classlist_Results-26-TR3-0.csv'
 STAFF_FILE = 'data/slack_staff.txt'
 NONSLACKERS_FILE = "output/nonslackers.txt"
 EXCEL_FIELD_FIRST_NAME = 2
@@ -41,11 +42,13 @@ def main():
         input("Are you sure you want to remove students?! Cancel the program to stop now.")
 
     # make Slack API connection
+    # Claude wrote:
     # NOTE: previously this disabled SSL certificate verification (ssl.CERT_NONE), which
     # left the connection carrying your Slack token open to man-in-the-middle interception.
     # If you were doing that to work around SSL errors, run `pip install --upgrade certifi`
     # instead of disabling verification.
-    client = WebClient(token=SLACK_AUTH_TOKEN)
+    ssl_context = ssl.create_default_context(cafile=certifi.where())
+    client = WebClient(token=SLACK_AUTH_TOKEN, ssl=ssl_context)
 
     # Enable rate limited error retries (https://slack.dev/python-slack-sdk/web/index.html#retryhandler)
     # max_retry_count raised from 1 to 3 - the SDK already backs off using Slack's
@@ -64,6 +67,7 @@ def main():
     slack_user_details = get_slack_users(client)
     # PP.pprint(slack_user_details)
     print(f"Got {len(slack_user_details)} Slack users")
+    # input("STOP")
 
     substitutions = create_substitutions()
     # work out up front which channels this run could possibly need, so we don't fetch
@@ -143,7 +147,7 @@ def main():
         outfile.write(", ".join(missing_students))
     if missing_channels:
         print("\nProblem (probably missing) channels: {}\n".format(
-            "\n".join(missing_channels)))
+            ", ".join(missing_channels)))
 
 
 def create_substitutions(filename=SUBSTITUTIONS_FILE):
